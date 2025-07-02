@@ -1,5 +1,7 @@
 # 🎬 MyTubeList
 
+<img src="assets/images/mytubelist_logo.png" width="200" alt="English AI Chat Logo">
+
 Aplicativo Flutter para gerenciamento de listas de vídeos do YouTube com suporte a múltiplos perfis.
 
 ---
@@ -85,5 +87,8 @@ Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
 
 👤 Autor
 Feito com 💚 por Jodaías B. S.
-https://www.linkedin.com/in/jodaias-barreto • https://github.com/jodaias
+
+📫 Contact
+feel free to contact me!
+<a href="https://www.linkedin.com/in/jodaias-barreto">Linkedin</a> • <a href="https://github.com/jodaias">Github</a>
 ```
