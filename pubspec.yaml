@@ -25,11 +25,13 @@ dev_dependencies:
   flutter_launcher_icons: "^0.13.1"
   flutter_native_splash: ^2.3.5
 
+# executar: flutter pub run flutter_launcher_icons:main
 flutter_icons:
   android: true
   ios: false
   image_path: "assets/images/mytubelist_logo.png"
 
+# executar: flutter pub run flutter_native_splash:create
 flutter_native_splash:
   color: "#FFFFFF"
   image: assets/images/mytubelist_logo.png
