@@ -418,6 +418,7 @@ class _PlayerPageState extends State<PlayerPage> {
   late YoutubePlayerController _controller;
   late int _currentIndex;
   late VideoProvider _videoProvider;
+  bool _repeat = false;
 
   @override
   void initState() {
@@ -447,7 +448,7 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _playVideo(int index, {int startAt = 0}) {
-    if (_currentIndex == index) return;
+    if (_currentIndex == index && !_repeat) return;
     setState(() {
       _currentIndex = index;
       _controller.load(widget.allowedVideos[_currentIndex].id,
@@ -469,6 +470,17 @@ class _PlayerPageState extends State<PlayerPage> {
         showVideoProgressIndicator: true,
         progressIndicatorColor: Colors.blueAccent,
         bottomActions: [
+          IconButton(
+            icon: Icon(
+              Icons.repeat_one,
+              color: _repeat ? Colors.greenAccent : Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _repeat = !_repeat;
+              });
+            },
+          ),
           CurrentPosition(),
           ProgressBar(isExpanded: true),
           RemainingDuration(),
@@ -484,6 +496,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   builder: (context) => FullScreenPlayerPage(
                     initialIndex: _currentIndex,
                     controller: _controller,
+                    repeat: _repeat,
                   ),
                 ),
               );
@@ -493,53 +506,129 @@ class _PlayerPageState extends State<PlayerPage> {
                 final positionInSeconds =
                     int.tryParse(result.split("|")[1]) ?? 0;
 
-                _playVideo(index, startAt: positionInSeconds);
+                _playVideo(index, startAt: positionInSeconds + 3);
                 _controller.play();
               }
             },
           )
         ],
         onEnded: (data) {
-          final nextIndex = (_currentIndex + 1) % widget.allowedVideos.length;
+          var nextIndex = _currentIndex;
+          if (!_repeat)
+            nextIndex =
+                (_currentIndex + 1) % _videoProvider.allowedVideos.length;
+
           _playVideo(nextIndex);
         },
       ),
       builder: (context, player) => Scaffold(
         appBar: AppBar(
-          title: Text(widget.allowedVideos[_currentIndex].title),
+          leading: IconButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            icon: Icon(Icons.menu),
+            color: Colors.white,
+          ),
+          backgroundColor: Colors.green[700],
+          centerTitle: true,
+          title: Text(
+            _videoProvider.allowedVideos[_currentIndex].title,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
         body: Column(
           children: [
             player,
             Expanded(
-              child: ListView.builder(
-                itemCount: widget.allowedVideos.length,
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) newIndex -= 1;
+
+                    final video =
+                        _videoProvider.allowedVideos.removeAt(oldIndex);
+                    _videoProvider.allowedVideos.insert(newIndex, video);
+                    _videoProvider
+                        .setAllowedVideos(_videoProvider.allowedVideos);
+
+                    // Atualiza _currentIndex se necessário
+                    if (_currentIndex == oldIndex) {
+                      _currentIndex = newIndex;
+                    } else if (oldIndex < _currentIndex &&
+                        newIndex >= _currentIndex) {
+                      _currentIndex -= 1;
+                    } else if (oldIndex > _currentIndex &&
+                        newIndex <= _currentIndex) {
+                      _currentIndex += 1;
+                    }
+                  });
+                },
+                itemCount: _videoProvider.allowedVideos.length,
                 itemBuilder: (context, index) {
-                  final video = widget.allowedVideos[index];
-                  return ListTile(
-                    selected: index == _currentIndex,
-                    selectedTileColor: Colors.green[800],
-                    leading: SizedBox(
-                      width: 100,
-                      height: 56,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          video.thumbnailUrl,
-                          fit: BoxFit.cover,
+                  final video = _videoProvider.allowedVideos[index];
+
+                  return KeyedSubtree(
+                    key: ValueKey(video.id),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0.1, 0),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child:
+                              FadeTransition(opacity: animation, child: child),
+                        );
+                      },
+                      child: ListTile(
+                        selected: index == _currentIndex,
+                        selectedTileColor: Colors.green[800],
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.drag_handle,
+                                    color: index == _currentIndex
+                                        ? Colors.white
+                                        : Colors.grey.shade700,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  SizedBox(
+                                    height: 60,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.network(
+                                        video.thumbnailUrl,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
+                        title: Text(
+                          video.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: index == _currentIndex
+                                ? Colors.white
+                                : Colors.grey.shade700,
+                          ),
+                        ),
+                        onTap: () => _playVideo(index),
                       ),
                     ),
-                    title: Text(
-                      video.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: index == _currentIndex
-                              ? Colors.white
-                              : Colors.black),
-                    ),
-                    onTap: () => _playVideo(index),
                   );
                 },
               ),

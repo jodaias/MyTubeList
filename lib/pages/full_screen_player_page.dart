@@ -8,11 +8,13 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 class FullScreenPlayerPage extends StatefulWidget {
   final int initialIndex;
   final YoutubePlayerController controller;
+  final bool repeat;
 
   const FullScreenPlayerPage({
     Key? key,
     required this.initialIndex,
     required this.controller,
+    this.repeat = false,
   }) : super(key: key);
 
   @override
@@ -24,17 +26,19 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
   late int _currentIndex;
   late VideoProvider _videoProvider;
   bool _showList = false;
+  bool _repeat = false;
 
   @override
   void initState() {
     super.initState();
     _videoProvider = Provider.of<VideoProvider>(context, listen: false);
     _currentIndex = widget.initialIndex;
+    _repeat = widget.repeat;
     _controller = YoutubePlayerController(
       initialVideoId: _videoProvider.allowedVideos[_currentIndex].id,
       flags: YoutubePlayerFlags(
         autoPlay: true,
-        startAt: widget.controller.value.position.inSeconds,
+        startAt: widget.controller.value.position.inSeconds + 3,
         mute: false,
         hideControls: false,
         controlsVisibleAtStart: false,
@@ -44,25 +48,18 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
       ),
     );
 
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      setLandscapeMode();
+    });
   }
 
   @override
   void dispose() {
     super.dispose();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.portraitUp,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   void _playVideo(int index, {int startAt = 0}) {
-    if (_currentIndex == index) return;
+    if (_currentIndex == index && !_repeat) return;
     setState(() {
       _currentIndex = index;
       _controller.load(_videoProvider.allowedVideos[index].id,
@@ -73,10 +70,30 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
   Future<void> _onPopScope(bool didPop, _) async {
     if (didPop) return;
     final shouldExit = await showExitConfirmationDialog(context);
+
     if (shouldExit) {
+      setPortraitMode();
       Navigator.of(context)
           .pop('${_currentIndex}|${_controller.value.position.inSeconds}');
+    } else {
+      setLandscapeMode();
     }
+  }
+
+  Future<void> setLandscapeMode() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  Future<void> setPortraitMode() async {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   @override
@@ -99,6 +116,18 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
                         showVideoProgressIndicator: true,
                         controlsTimeOut: Duration(seconds: 2),
                         bottomActions: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.repeat,
+                              color:
+                                  _repeat ? Colors.greenAccent : Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _repeat = !_repeat;
+                              });
+                            },
+                          ),
                           CurrentPosition(),
                           ProgressBar(isExpanded: true),
                           RemainingDuration(),
@@ -108,6 +137,7 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
                               color: Colors.white,
                             ),
                             onPressed: () {
+                              setPortraitMode();
                               Navigator.of(context).pop(
                                   '${_currentIndex}|${_controller.value.position.inSeconds}');
                             },
@@ -115,8 +145,12 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
                         ],
                         progressIndicatorColor: Colors.greenAccent,
                         onEnded: (data) {
-                          final nextIndex = (_currentIndex + 1) %
-                              _videoProvider.allowedVideos.length;
+                          var nextIndex = _currentIndex;
+
+                          if (!_repeat)
+                            nextIndex = (_currentIndex + 1) %
+                                _videoProvider.allowedVideos.length;
+
                           _playVideo(nextIndex);
                         },
                       ),
@@ -137,6 +171,11 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
                           final video = _videoProvider.allowedVideos[index];
                           return InkWell(
                             onTap: () {
+                              if (index != _currentIndex) {
+                                setState(() {
+                                  _repeat = false;
+                                });
+                              }
                               _playVideo(index);
                             },
                             child: Container(
