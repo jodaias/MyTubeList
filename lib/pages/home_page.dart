@@ -81,32 +81,34 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 18),
               ),
             )
-          : GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 1,
-                childAspectRatio: 4 / 3,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+          : SafeArea(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 1,
+                  childAspectRatio: 4 / 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: videos.length,
+                itemBuilder: (_, index) {
+                  VideoModel video = videos[index];
+                  return VideoCard(
+                    video: video,
+                    onTap: () {
+                      Navigator.pushNamed(context, '/player', arguments: video);
+                    },
+                    onDeleteConfirmed: () async {
+                      final confirmed = await showMathConfirmationModal(
+                          context, "Confirmar remoção", "Remover");
+                      if (confirmed) {
+                        await profileProvider.removeAllowedVideo(video.id);
+                        videoProvider.removeVideoFromCache(video.id);
+                      }
+                    },
+                  );
+                },
               ),
-              itemCount: videos.length,
-              itemBuilder: (_, index) {
-                VideoModel video = videos[index];
-                return VideoCard(
-                  video: video,
-                  onTap: () {
-                    Navigator.pushNamed(context, '/player', arguments: video);
-                  },
-                  onDeleteConfirmed: () async {
-                    final confirmed = await showMathConfirmationModal(
-                        context, "Confirmar remoção", "Remover");
-                    if (confirmed) {
-                      await profileProvider.removeAllowedVideo(video.id);
-                      videoProvider.removeVideoFromCache(video.id);
-                    }
-                  },
-                );
-              },
             ),
     );
   }
