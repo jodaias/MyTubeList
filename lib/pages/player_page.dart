@@ -450,6 +450,8 @@ class _PlayerPageState extends State<PlayerPage> {
   void _playVideo(int index, {int startAt = 0}) {
     if (_currentIndex == index && !_repeat) return;
     setState(() {
+      if (_currentIndex != index) _repeat = false;
+
       _currentIndex = index;
       _controller.load(widget.allowedVideos[_currentIndex].id,
           startAt: startAt);
@@ -515,8 +517,7 @@ class _PlayerPageState extends State<PlayerPage> {
         onEnded: (data) {
           var nextIndex = _currentIndex;
           if (!_repeat)
-            nextIndex =
-                (_currentIndex + 1) % _videoProvider.allowedVideos.length;
+            nextIndex = (_currentIndex + 1) % widget.allowedVideos.length;
 
           _playVideo(nextIndex);
         },
@@ -533,7 +534,7 @@ class _PlayerPageState extends State<PlayerPage> {
           backgroundColor: Colors.green[700],
           centerTitle: true,
           title: Text(
-            _videoProvider.allowedVideos[_currentIndex].title,
+            widget.allowedVideos[_currentIndex].title,
             style: const TextStyle(color: Colors.white),
           ),
         ),
@@ -547,11 +548,9 @@ class _PlayerPageState extends State<PlayerPage> {
                   setState(() {
                     if (newIndex > oldIndex) newIndex -= 1;
 
-                    final video =
-                        _videoProvider.allowedVideos.removeAt(oldIndex);
-                    _videoProvider.allowedVideos.insert(newIndex, video);
-                    _videoProvider
-                        .setAllowedVideos(_videoProvider.allowedVideos);
+                    final video = widget.allowedVideos.removeAt(oldIndex);
+                    widget.allowedVideos.insert(newIndex, video);
+                    _videoProvider.setAllowedVideos(widget.allowedVideos);
 
                     // Atualiza _currentIndex se necessário
                     if (_currentIndex == oldIndex) {
@@ -565,9 +564,9 @@ class _PlayerPageState extends State<PlayerPage> {
                     }
                   });
                 },
-                itemCount: _videoProvider.allowedVideos.length,
+                itemCount: widget.allowedVideos.length,
                 itemBuilder: (context, index) {
-                  final video = _videoProvider.allowedVideos[index];
+                  final video = widget.allowedVideos[index];
 
                   return KeyedSubtree(
                     key: ValueKey(video.id),
@@ -616,6 +615,12 @@ class _PlayerPageState extends State<PlayerPage> {
                             ),
                           ],
                         ),
+                        trailing: _currentIndex == index && _repeat
+                            ? Icon(
+                                Icons.repeat_one,
+                                color: Colors.white,
+                              )
+                            : null,
                         title: Text(
                           video.title,
                           maxLines: 2,

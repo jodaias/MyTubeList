@@ -61,6 +61,8 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
   void _playVideo(int index, {int startAt = 0}) {
     if (_currentIndex == index && !_repeat) return;
     setState(() {
+      if (_currentIndex != index) _repeat = false;
+
       _currentIndex = index;
       _controller.load(_videoProvider.allowedVideos[index].id,
           startAt: startAt);
@@ -170,14 +172,7 @@ class _FullScreenPlayerPageState extends State<FullScreenPlayerPage> {
                         itemBuilder: (context, index) {
                           final video = _videoProvider.allowedVideos[index];
                           return InkWell(
-                            onTap: () {
-                              if (index != _currentIndex) {
-                                setState(() {
-                                  _repeat = false;
-                                });
-                              }
-                              _playVideo(index);
-                            },
+                            onTap: () => _playVideo(index),
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
