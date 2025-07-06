@@ -78,8 +78,7 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Future<void> scrollToIndex(int index) async {
-    final itemHeight = 76.0;
+  Future<void> scrollToIndex(int index, {double itemHeight = 76}) async {
     final offset = index * itemHeight;
 
     await _scrollController.animateTo(
@@ -128,6 +127,9 @@ class _PlayerPageState extends State<PlayerPage> {
             setState(() {
               _showList = false;
             });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              scrollToIndex(_currentIndex);
+            });
           },
           player: YoutubePlayer(
             controller: _controller,
@@ -149,6 +151,10 @@ class _PlayerPageState extends State<PlayerPage> {
                         onPressed: () {
                           setState(() {
                             _showList = !_showList;
+                          });
+
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            scrollToIndex(_currentIndex, itemHeight: 116.0);
                           });
                         },
                         child: Icon(
@@ -268,6 +274,9 @@ class _PlayerPageState extends State<PlayerPage> {
               setState(() {
                 _showList = !_showList;
               });
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                scrollToIndex(_currentIndex, itemHeight: 116.0);
+              });
             },
           ),
         ),
@@ -282,6 +291,7 @@ class _PlayerPageState extends State<PlayerPage> {
       onReorder: (oldIndex, newIndex) {
         setState(() {
           if (newIndex > oldIndex) newIndex -= 1;
+
           final video = widget.allowedVideos.removeAt(oldIndex);
           widget.allowedVideos.insert(newIndex, video);
           _videoProvider.setAllowedVideos(widget.allowedVideos);
@@ -293,6 +303,10 @@ class _PlayerPageState extends State<PlayerPage> {
           } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
             _currentIndex += 1;
           }
+
+          // Também reordena as keys para manter sincronização
+          final key = _itemKeys.removeAt(oldIndex);
+          _itemKeys.insert(newIndex, key);
         });
       },
       itemCount: widget.allowedVideos.length,
@@ -301,7 +315,7 @@ class _PlayerPageState extends State<PlayerPage> {
         final isPlaying = index == _currentIndex;
 
         return KeyedSubtree(
-          key: ValueKey(video.id),
+          key: _itemKeys[index], // usa as keys sincronizadas
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, animation) {
@@ -356,7 +370,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           ),
                           if (_currentIndex == index)
                             Positioned(
-                              bottom: 42,
+                              bottom: 4,
                               right: 4,
                               child: _controller.value.isPlaying
                                   ? Image.asset(
