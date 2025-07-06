@@ -3,15 +3,17 @@ import '../models/video_model.dart';
 
 class VideoCard extends StatelessWidget {
   final VideoModel video;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   final Future<void> Function()? onDeleteConfirmed;
+  final Future<void> Function()? onAddConfirmed;
   final bool isAdded;
 
   const VideoCard({
     required this.video,
-    required this.onTap,
+    this.onTap,
     this.isAdded = false,
+    this.onAddConfirmed = null,
     this.onDeleteConfirmed = null,
     Key? key,
   }) : super(key: key);
@@ -21,7 +23,7 @@ class VideoCard extends StatelessWidget {
     return Opacity(
       opacity: isAdded ? 0.5 : 1.0,
       child: GestureDetector(
-        onTap: isAdded ? null : onTap,
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -37,15 +39,38 @@ class VideoCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Botão de deletar se existir callback
                 if (onDeleteConfirmed != null)
+                  Positioned(
+                    top: 5,
+                    right: 15,
+                    child: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        await onDeleteConfirmed!();
+                      },
+                      splashRadius: 20,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+
+                if (onAddConfirmed != null)
                   Positioned(
                     top: 4,
                     right: 4,
                     child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () async {
-                        await onDeleteConfirmed!();
-                      },
+                      icon: Icon(
+                        isAdded ? Icons.check_circle : Icons.add_circle_outline,
+                        color: isAdded ? Colors.green : Colors.blue,
+                        size: 35,
+                      ),
+                      onPressed: isAdded
+                          ? null
+                          : () async {
+                              await onAddConfirmed!();
+                            },
                       splashRadius: 20,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),

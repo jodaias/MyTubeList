@@ -106,24 +106,12 @@ class _SearchPageState extends State<SearchPage> {
                 return VideoCard(
                   video: video,
                   isAdded: isAdded,
-                  onTap: () async {
+                  onAddConfirmed: () async {
                     if (!isAdded) {
-                      final confirm = await showAddConfirmationDialog(context);
-                      if (confirm) {
-                        // Adiciona no ProfileProvider
-                        await profileProvider.addAllowedVideo(video.id);
-                        // Salva no cache do VideoProvider
-                        await videoProvider.cacheVideo(video);
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Vídeo adicionado com sucesso!')),
-                        );
-
-                        setState(() {
-                          FocusScope.of(context).unfocus();
-                        });
-                      }
+                      // Adiciona no ProfileProvider
+                      await profileProvider.addAllowedVideo(video.id);
+                      // Salva no cache do VideoProvider
+                      await videoProvider.cacheVideo(video);
                     }
                   },
                 );
@@ -133,26 +121,5 @@ class _SearchPageState extends State<SearchPage> {
         ],
       ),
     );
-  }
-
-  Future<bool> showAddConfirmationDialog(BuildContext context) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Confirmar'),
-            content: const Text('Quer mesmo adicionar este vídeo?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Não'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Sim'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
   }
 }

@@ -14,23 +14,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  void _logout(BuildContext context, ProfileProvider profileProvider) async {
-    await profileProvider.clearProfile();
+  void _logout(BuildContext context, ProfileProvider _profileProvider) async {
+    await _profileProvider.clearProfile();
     Navigator.pushNamedAndRemoveUntil(context, '/profile', (_) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    final videoProvider = Provider.of<VideoProvider>(context);
+    final videoProvider = context.watch<VideoProvider>();
+    final profileProvider = context.watch<ProfileProvider>();
 
     final selectedProfile = profileProvider.selectedProfile;
 
     if (selectedProfile == null) {
       return const Scaffold(
-        body: Center(
-          child: Text("Nenhum perfil selecionado."),
-        ),
+        body: Center(child: Text("Nenhum perfil selecionado.")),
       );
     }
 
@@ -54,24 +52,30 @@ class _HomePageState extends State<HomePage> {
         ),
         centerTitle: true,
         actions: [
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(
-              Icons.add_circle_outline_outlined,
+              Icons.settings,
               color: Colors.white,
             ),
-            onPressed: () async {
-              final canEnter = await showMathConfirmationModal(
-                  context, "Tela de adicionar novos vídeos", "Navegar");
-              if (canEnter) {
-                Navigator.pushNamed(context, '/search');
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Desafio incorreto. Acesso negado!')),
-                );
+            onSelected: (value) async {
+              if (value == 'add_video') {
+                await _handleAddVideo(context);
+              } else if (value == 'delete_profile') {
+                await _handleDeleteProfile(
+                    context, selectedProfile.id, profileProvider);
               }
             },
-          )
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'add_video',
+                child: Text('Adicionar novo vídeo'),
+              ),
+              const PopupMenuItem(
+                value: 'delete_profile',
+                child: Text('Excluir perfil / conta'),
+              ),
+            ],
+          ),
         ],
       ),
       body: videos.isEmpty
@@ -100,10 +104,10 @@ class _HomePageState extends State<HomePage> {
                     },
                     onDeleteConfirmed: () async {
                       final confirmed = await showMathConfirmationModal(
-                          context, "Confirmar remoção", "Remover");
+                          context, "Deseja mesmo remover?", "Remover");
                       if (confirmed) {
                         await profileProvider.removeAllowedVideo(video.id);
-                        videoProvider.removeVideoFromCache(video.id);
+                        await videoProvider.removeVideoFromCache(video.id);
                       }
                     },
                   );
@@ -111,5 +115,35 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
     );
+  }
+
+  Future<void> _handleAddVideo(BuildContext context) async {
+    final canEnter = await showMathConfirmationModal(
+        context, "Acessar Tela: adicionar novos vídeos!", "confirmar");
+    if (canEnter) {
+      Navigator.pushNamed(context, '/search');
+    }
+  }
+
+  Future<void> _handleDeleteProfile(BuildContext context, String profileId,
+      ProfileProvider profileProvider) async {
+    final canEnter = await showMathConfirmationModal(
+        context, "Acesso a modal: excluir perfil!", "cofirmar");
+    if (canEnter) {
+      final confirm = await showConfirmationDialog(
+        context,
+        title: 'Excluir perfil',
+        content:
+            'Tem certeza que deseja excluir este perfil? Esta ação não poderá ser desfeita.',
+        confirmText: 'Excluir',
+        cancelText: 'Cancelar',
+      );
+
+      if (confirm) {
+        await profileProvider.deleteProfile(profileId);
+
+        Navigator.pushNamedAndRemoveUntil(context, '/profile', (r) => false);
+      }
+    }
   }
 }

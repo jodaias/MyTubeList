@@ -22,10 +22,10 @@ class VideoProvider extends ChangeNotifier {
   List<VideoModel> allowedVideos = [];
 
   VideoProvider() {
-    _init();
+    init();
   }
 
-  Future<void> _init() async {
+  Future<void> init() async {
     _videoBox = await Hive.openBox(videosBoxName);
     _youtubeApi = YoutubeAPI(_youtubeApiKey, maxResults: 50);
 
@@ -33,6 +33,7 @@ class VideoProvider extends ChangeNotifier {
     _allCachedVideos = _videoBox.values
         .map((e) => VideoModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
+
     notifyListeners();
   }
 
@@ -65,8 +66,9 @@ class VideoProvider extends ChangeNotifier {
       await prefs.setStringList(key, searches);
     }
 
-    // Atualiza o provider em memória também, se desejar manter local
-    _previousSearches = searches;
+    _previousSearches =
+        prefs.getStringList(key) ?? []; // 🔥 garante reload real
+
     notifyListeners();
   }
 
@@ -81,16 +83,22 @@ class VideoProvider extends ChangeNotifier {
   /// 💾 Salva ou atualiza um vídeo no cache local
   Future<void> cacheVideo(VideoModel video) async {
     await _videoBox.put(video.id, video.toMap());
-    if (!_allCachedVideos.any((v) => v.id == video.id)) {
-      _allCachedVideos.add(video);
-      notifyListeners();
-    }
+
+    _allCachedVideos = _videoBox.values
+        .map((e) => VideoModel.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+
+    notifyListeners();
   }
 
   /// ❌ Remove um vídeo do cache (opcional)
   Future<void> removeVideoFromCache(String videoId) async {
     await _videoBox.delete(videoId);
-    _allCachedVideos.removeWhere((v) => v.id == videoId);
+
+    _allCachedVideos = _videoBox.values
+        .map((e) => VideoModel.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+
     notifyListeners();
   }
 

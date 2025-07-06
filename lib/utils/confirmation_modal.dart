@@ -38,6 +38,7 @@ Future<bool> showMathConfirmationModal(
                     TextField(
                       controller: answerController,
                       keyboardType: TextInputType.number,
+                      autofocus: true,
                       onChanged: checkAnswer,
                       decoration: const InputDecoration(
                         labelText: 'Sua resposta',
@@ -53,7 +54,9 @@ Future<bool> showMathConfirmationModal(
                   ),
                   ElevatedButton(
                     onPressed: isButtonEnabled
-                        ? () => Navigator.of(context).pop(true)
+                        ? () {
+                            Navigator.of(context).pop(true);
+                          }
                         : null,
                     child: Text(textBtn),
                   ),
@@ -85,4 +88,31 @@ Future<bool> showExitConfirmationDialog(BuildContext context) async {
     ),
   );
   return result ?? false;
+}
+
+Future<bool> showConfirmationDialog(
+  BuildContext context, {
+  required String title,
+  required String content,
+  String confirmText = 'Confirmar',
+  String cancelText = 'Cancelar',
+}) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(content),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(cancelText),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(confirmText),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }

@@ -25,7 +25,21 @@ void main() async {
   Hive.registerAdapter(VideoModelAdapter());
   Hive.registerAdapter(ProfileModelAdapter());
 
-  runApp(const MyApp());
+  final profileProvider = ProfileProvider();
+  await profileProvider.init();
+
+  final videoProvider = VideoProvider();
+  await videoProvider.init();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => profileProvider),
+        ChangeNotifierProvider(create: (_) => videoProvider),
+      ],
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -33,45 +47,38 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ProfileProvider()),
-        ChangeNotifierProvider(create: (_) => VideoProvider()),
-      ],
-      child: MaterialApp(
-        title: 'My Tube List',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-        ),
-        initialRoute: '/',
-        routes: {
-          '/': (_) => const SplashPage(),
-          '/profile': (_) => const ProfilePage(),
-          '/home': (_) => const HomePage(),
-          '/search': (_) => const SearchPage(),
-          '/player': (context) {
-            final video =
-                ModalRoute.of(context)!.settings.arguments as VideoModel;
-
-            // providers
-            final videoProvider =
-                Provider.of<VideoProvider>(context, listen: false);
-            final profileProvider =
-                Provider.of<ProfileProvider>(context, listen: false);
-
-            final allowedVideos =
-                videoProvider.getAllowedVideos(profileProvider);
-
-            final index = allowedVideos.indexWhere((v) => v.id == video.id);
-
-            return PlayerPage(
-              allowedVideos: allowedVideos,
-              initialIndex: index >= 0 ? index : 0,
-            );
-          },
-        },
+    return MaterialApp(
+      title: 'My Tube List',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.green,
       ),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const SplashPage(),
+        '/profile': (_) => const ProfilePage(),
+        '/home': (_) => const HomePage(),
+        '/search': (_) => const SearchPage(),
+        '/player': (context) {
+          final video =
+              ModalRoute.of(context)!.settings.arguments as VideoModel;
+
+          // providers
+          final videoProvider =
+              Provider.of<VideoProvider>(context, listen: false);
+          final profileProvider =
+              Provider.of<ProfileProvider>(context, listen: false);
+
+          final allowedVideos = videoProvider.getAllowedVideos(profileProvider);
+
+          final index = allowedVideos.indexWhere((v) => v.id == video.id);
+
+          return PlayerPage(
+            allowedVideos: allowedVideos,
+            initialIndex: index >= 0 ? index : 0,
+          );
+        },
+      },
     );
   }
 }

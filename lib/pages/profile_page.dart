@@ -20,25 +20,36 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _createProfile(BuildContext context, ProfileProvider provider) async {
-    final newProfileName = await showDialog<String>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => const CreateProfileDialog(),
+      builder: (_) => CreateProfileDialog(),
     );
 
-    if (newProfileName != null && newProfileName.isNotEmpty) {
-      await provider.addProfile(newProfileName);
+    if (result != null) {
+      final name = result['name']!;
+      final password = result['password'] ?? '';
+      final question = result['question'] ?? '';
+      final answer = result['answer'] ?? '';
+
+      await provider.createProfile(name, password, question, answer);
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final profileProvider = context.watch<ProfileProvider>();
+
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitDown,
       DeviceOrientation.portraitUp,
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-    final profileProvider = Provider.of<ProfileProvider>(context);
     final profiles = profileProvider.profiles;
     final selectedProfile = profileProvider.selectedProfile;
 
@@ -73,8 +84,178 @@ class _ProfilePageState extends State<ProfilePage> {
                     return Stack(
                       children: [
                         InkWell(
-                          onTap: () =>
-                              _selectProfile(context, profile, profileProvider),
+                          onTap: () async {
+                            if (profile.password != null &&
+                                profile.password!.isNotEmpty) {
+                              final passwordController =
+                                  TextEditingController();
+
+                              final entered = await showDialog<String>(
+                                context: context,
+                                builder: (context) {
+                                  return StatefulBuilder(
+                                    builder: (context, setState) {
+                                      return AlertDialog(
+                                        title: Text(
+                                            'Digite a senha para ${profile.name}'),
+                                        content: TextField(
+                                          controller: passwordController,
+                                          autofocus: true,
+                                          obscureText: true,
+                                          decoration: const InputDecoration(
+                                              labelText: 'Senha'),
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          TextButton(
+                                            onPressed: passwordController
+                                                        .text.isNotEmpty &&
+                                                    passwordController.text
+                                                            .trim()
+                                                            .length >=
+                                                        4
+                                                ? () => Navigator.pop(
+                                                    context,
+                                                    passwordController.text
+                                                        .trim())
+                                                : null,
+                                            child: const Text('Entrar'),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+
+                              if (entered == null) return;
+
+                              if (entered.length < 4) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'A senha deve ter pelo menos 4 dígitos')),
+                                );
+                                return;
+                              }
+
+                              if (entered != profile.password) {
+                                final answerController =
+                                    TextEditingController();
+
+                                final retry = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Senha incorreta'),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text(
+                                            'Senha incorreta. Esqueceu a senha?'),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                            'Pergunta secreta: ${profile.securityQuestion ?? "Nenhuma cadastrada."}'),
+                                        if (profile.securityQuestion != null)
+                                          TextField(
+                                            controller: answerController,
+                                            autofocus: true,
+                                            decoration: const InputDecoration(
+                                                labelText: 'Resposta secreta'),
+                                          ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancelar'),
+                                      ),
+                                      if (profile.securityQuestion != null)
+                                        TextButton(
+                                          onPressed: () {
+                                            final answer =
+                                                answerController.text.trim();
+                                            final correct =
+                                                answer.toLowerCase() ==
+                                                    profile.securityAnswer
+                                                        ?.toLowerCase();
+                                            Navigator.pop(context, correct);
+                                          },
+                                          child: const Text('Recuperar senha'),
+                                        ),
+                                    ],
+                                  ),
+                                );
+
+                                if (retry == true) {
+                                  final newPasswordController =
+                                      TextEditingController();
+
+                                  // Redefinir senha
+                                  final newPass = await showDialog<String>(
+                                    context: context,
+                                    builder: (context) => StatefulBuilder(
+                                      builder: (context, setState) {
+                                        return AlertDialog(
+                                          title: const Text('Nova senha'),
+                                          content: TextField(
+                                            controller: newPasswordController,
+                                            autofocus: true,
+                                            obscureText: true,
+                                            decoration: const InputDecoration(
+                                                labelText:
+                                                    'Nova senha (mínimo 4 dígitos)'),
+                                            onChanged: (_) => setState(() {}),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: const Text('Cancelar'),
+                                            ),
+                                            TextButton(
+                                              onPressed: newPasswordController
+                                                          .text
+                                                          .trim()
+                                                          .length >=
+                                                      4
+                                                  ? () => Navigator.pop(
+                                                      context,
+                                                      newPasswordController.text
+                                                          .trim())
+                                                  : null,
+                                              child: const Text('Salvar'),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  );
+
+                                  if (newPass != null &&
+                                      newPass.isNotEmpty &&
+                                      newPass.length >= 4) {
+                                    await profileProvider.setProfilePassword(
+                                        profile.id, newPass);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'Senha redefinida com sucesso')),
+                                    );
+                                  }
+                                }
+
+                                return;
+                              }
+                            }
+
+                            _selectProfile(context, profile, profileProvider);
+                          },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             width: double.infinity,
@@ -114,29 +295,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.white, size: 20),
-                              onPressed: () async {
-                                final shouldDelete =
-                                    await showMathConfirmationModal(
-                                        context, "Apagar Perfil", "Apagar");
-                                if (shouldDelete) {
-                                  await profileProvider
-                                      .deleteProfile(profile.id);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
                       ],
                     );
                   },
@@ -148,7 +306,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final shouldAccessCreate = await showMathConfirmationModal(
-                      context, "Acessar Criar Perfil", "Navegar");
+                      context, "Acessar Tela: Criar Perfil!", "Navegar");
                   if (shouldAccessCreate) {
                     _createProfile(context, profileProvider);
                   }
@@ -182,15 +340,61 @@ class CreateProfileDialog extends StatefulWidget {
 }
 
 class _CreateProfileDialogState extends State<CreateProfileDialog> {
-  final TextEditingController _controller = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _questionController = TextEditingController();
+  final TextEditingController _answerController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
+    final isPasswordValid = (_passwordController.text.isNotEmpty &&
+        _passwordController.text.trim().length >= 4);
+
     return AlertDialog(
       title: const Text('Novo Perfil'),
-      content: TextField(
-        controller: _controller,
-        decoration: const InputDecoration(hintText: 'Nome do perfil'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nome do Perfil'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Senha (opcional)'),
+              onChanged: (_) => setState(() {}),
+            ),
+            if (_passwordController.text.isNotEmpty && !isPasswordValid)
+              const Text(
+                'A senha deve ter pelo menos 4 dígitos.',
+                style: TextStyle(color: Colors.red),
+              ),
+            if (_passwordController.text.isEmpty)
+              const Text(
+                'Senha opcional, mas recomendada para segurança.',
+                style: TextStyle(color: Colors.green),
+              ),
+            if (_passwordController.text.isNotEmpty && isPasswordValid) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: _questionController,
+                decoration: const InputDecoration(
+                    labelText: 'Pergunta secreta (ex: sua cor favorita) *'),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _answerController,
+                decoration: const InputDecoration(
+                    labelText: 'Resposta da pergunta secreta *'),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -198,9 +402,22 @@ class _CreateProfileDialogState extends State<CreateProfileDialog> {
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop(_controller.text.trim());
-          },
+          onPressed: _nameController.text.isNotEmpty &&
+                  _nameController.text.trim().length >= 2 &&
+                  (_passwordController.text.isEmpty ||
+                      (_passwordController.text.isNotEmpty &&
+                          _passwordController.text.length >= 4 &&
+                          _answerController.text.isNotEmpty &&
+                          _questionController.text.isNotEmpty))
+              ? () {
+                  Navigator.of(context).pop({
+                    'name': _nameController.text.trim(),
+                    'password': _passwordController.text.trim(),
+                    'question': _questionController.text.trim(),
+                    'answer': _answerController.text.trim(),
+                  });
+                }
+              : null,
           child: const Text('Criar'),
         ),
       ],
