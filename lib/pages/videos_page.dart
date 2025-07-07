@@ -68,29 +68,33 @@ class _VideosPageState extends State<VideosPage> {
                     });
                   },
                   onDeleteConfirmed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Excluir vídeo'),
-                        content: Text(
-                            'Tem certeza que deseja excluir este vídeo da lista?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: Text('Cancelar'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text('Excluir'),
-                          ),
-                        ],
-                      ),
-                    );
+                    final confirmed = await showMathConfirmationModal(
+                        context, "Acesso a modal: excluir video!", "Confirmar");
+                    if (confirmed) {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: Text('Excluir vídeo'),
+                          content: Text(
+                              'Tem certeza que deseja excluir este vídeo da lista?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text('Cancelar'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text('Excluir'),
+                            ),
+                          ],
+                        ),
+                      );
 
-                    if (confirm == true) {
-                      await videoListProvider.removeVideoFromList(
-                          widget.listId, video.id);
-                      widget.videos.removeWhere((v) => v.id == video.id);
+                      if (confirm == true) {
+                        await videoListProvider.removeVideoFromList(
+                            widget.listId, video.id);
+                        widget.videos.removeWhere((v) => v.id == video.id);
+                      }
                     }
                   },
                 );
