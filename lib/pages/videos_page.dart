@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_tube_list/utils/confirmation_modal.dart';
 import 'package:my_tube_list/widgets/video_card.dart';
 import 'package:provider/provider.dart';
 import '../models/video_model.dart';
@@ -35,6 +36,20 @@ class _VideosPageState extends State<VideosPage> {
             style: TextStyle(
               color: Colors.white,
             )),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add, color: Colors.white),
+            onPressed: () async {
+              final canEnter = await showMathConfirmationModal(
+                  context, "Acesso a tela de pesquisa!", "confirmar");
+              if (canEnter) {
+                Navigator.pushNamed(context, '/search',
+                    arguments: widget.listId);
+              }
+            },
+          ),
+        ],
         backgroundColor: Colors.green[700],
       ),
       body: widget.videos.isEmpty

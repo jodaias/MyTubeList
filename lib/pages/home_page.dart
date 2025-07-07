@@ -68,8 +68,12 @@ class HomePage extends StatelessWidget {
             ),
             onSelected: (value) async {
               if (value == 'new_list') {
-                _showCreateListDialog(
-                    context, videoListProvider, selectedProfile.id);
+                final canEnter = await showMathConfirmationModal(
+                    context, "Acesso a modal: criar lista!", "confirmar");
+                if (canEnter) {
+                  _showCreateListDialog(
+                      context, videoListProvider, selectedProfile.id);
+                }
               } else if (value == 'delete_profile') {
                 await _handleDeleteProfile(
                     context, selectedProfile.id, profileProvider);
@@ -99,9 +103,13 @@ class HomePage extends StatelessWidget {
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      _showCreateListDialog(
-                          context, videoListProvider, selectedProfile.id);
+                    onPressed: () async {
+                      final canEnter = await showMathConfirmationModal(
+                          context, "Acesso a modal: criar lista!", "confirmar");
+                      if (canEnter) {
+                        _showCreateListDialog(
+                            context, videoListProvider, selectedProfile.id);
+                      }
                     },
                     child: Text('Criar nova lista'),
                   ),

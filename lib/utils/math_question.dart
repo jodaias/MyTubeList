@@ -6,9 +6,9 @@ class MathQuestion {
 
   MathQuestion(this.a, this.b);
 
-  int get answer => a * b;
+  int get answer => a + b;
 
-  String get question => '$a × $b = ?';
+  String get question => '$a + $b = ?';
 }
 
 MathQuestion generateRandomQuestion() {
