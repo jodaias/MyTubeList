@@ -383,12 +383,14 @@ class _CreateProfileDialogState extends State<CreateProfileDialog> {
               const SizedBox(height: 16),
               TextField(
                 controller: _questionController,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                     labelText: 'Pergunta secreta (ex: sua cor favorita) *'),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _answerController,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                     labelText: 'Resposta da pergunta secreta *'),
               ),

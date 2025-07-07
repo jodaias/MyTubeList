@@ -437,30 +437,29 @@ class _PlayerPageState extends State<PlayerPage> {
                 const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             selected: index == _currentIndex,
             selectedTileColor: Colors.green[800],
-            leading: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ReorderableDragStartListener(
-                  index: index,
-                  child: Icon(
+            leading: ReorderableDragStartListener(
+              index: index,
+              child: Row(
+                children: [
+                  Icon(
                     Icons.drag_handle,
                     color: index == _currentIndex
                         ? Colors.white
                         : Colors.grey.shade700,
                   ),
-                ),
-                const SizedBox(width: 5),
-                SizedBox(
-                  height: 60,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      video.thumbnailUrl,
-                      fit: BoxFit.cover,
+                  const SizedBox(width: 5),
+                  SizedBox(
+                    height: 60,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        video.thumbnailUrl,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             trailing: _currentIndex == index && _repeat
                 ? const Icon(Icons.repeat_one, color: Colors.white)
