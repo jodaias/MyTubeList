@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/video_provider.dart';
-import '../providers/profile_provider.dart';
-import '../widgets/video_card.dart';
+import '../providers/video_list_provider.dart';
 import '../models/video_model.dart';
+import '../widgets/video_card.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({Key? key}) : super(key: key);
+  final String listId;
+
+  const SearchPage({Key? key, required this.listId}) : super(key: key);
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -20,13 +22,24 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final videoProvider = Provider.of<VideoProvider>(context);
-    final profileProvider = Provider.of<ProfileProvider>(context);
+    final videoListProvider = Provider.of<VideoListProvider>(context);
+
+    final list =
+        videoListProvider.lists.firstWhere((l) => l.id == widget.listId);
+
+    Future<void> _search(String query) async {
+      FocusScope.of(context).unfocus();
+      setState(() => loading = true);
+      videos = await videoProvider.search(query);
+      videoProvider.addSearchTerm(query, list.profileId);
+      setState(() => loading = false);
+    }
 
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text(
-          'Pesquisar Vídeos',
+        title: Text(
+          'Adicionar vídeos a ${list.name}',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.green[700],
@@ -45,6 +58,8 @@ class _SearchPageState extends State<SearchPage> {
             child: TextField(
               controller: _controller,
               decoration: const InputDecoration(labelText: 'Pesquisar'),
+              textInputAction: TextInputAction.search,
+              onSubmitted: _search,
             ),
           ),
           if (videos.isEmpty)
@@ -59,16 +74,7 @@ class _SearchPageState extends State<SearchPage> {
                     children: videoProvider.previousSearches.map((term) {
                       return ActionChip(
                         label: Text(term),
-                        onPressed: () async {
-                          FocusScope.of(context).unfocus();
-                          setState(() {
-                            loading = true;
-                          });
-                          videos = await videoProvider.search(term);
-                          setState(() {
-                            loading = false;
-                          });
-                        },
+                        onPressed: () => _search(term),
                       );
                     }).toList(),
                   ),
@@ -76,14 +82,7 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ElevatedButton(
-            onPressed: () async {
-              FocusScope.of(context).unfocus();
-              setState(() => loading = true);
-              videos = await videoProvider.search(_controller.text);
-              videoProvider.addSearchTerm(
-                  _controller.text, profileProvider.selectedProfile!.id);
-              setState(() => loading = false);
-            },
+            onPressed: () => _search(_controller.text),
             child: const Text('Buscar'),
           ),
           if (loading) const CircularProgressIndicator(),
@@ -99,19 +98,17 @@ class _SearchPageState extends State<SearchPage> {
               itemCount: videos.length,
               itemBuilder: (_, i) {
                 final video = videos[i];
-                final isAdded = profileProvider.selectedProfile?.allowedVideoIds
-                        .contains(video.id) ??
-                    false;
+                final isAdded = list.videos.any((v) => v.id == video.id);
 
                 return VideoCard(
                   video: video,
                   isAdded: isAdded,
                   onAddConfirmed: () async {
                     if (!isAdded) {
-                      // Adiciona no ProfileProvider
-                      await profileProvider.addAllowedVideo(video.id);
-                      // Salva no cache do VideoProvider
+                      await videoListProvider.addVideoToList(
+                          widget.listId, video);
                       await videoProvider.cacheVideo(video);
+                      setState(() {});
                     }
                   },
                 );

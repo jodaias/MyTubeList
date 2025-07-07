@@ -3,7 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:youtube_api/youtube_api.dart';
 import '../models/video_model.dart';
-import '../providers/profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VideoProvider extends ChangeNotifier {
@@ -18,8 +17,6 @@ class VideoProvider extends ChangeNotifier {
 
   List<String> _previousSearches = [];
   List<String> get previousSearches => _previousSearches;
-
-  List<VideoModel> allowedVideos = [];
 
   VideoProvider() {
     init();
@@ -66,8 +63,7 @@ class VideoProvider extends ChangeNotifier {
       await prefs.setStringList(key, searches);
     }
 
-    _previousSearches =
-        prefs.getStringList(key) ?? []; // 🔥 garante reload real
+    _previousSearches = prefs.getStringList(key) ?? [];
 
     notifyListeners();
   }
@@ -102,19 +98,10 @@ class VideoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ Retorna vídeos permitidos de acordo com o perfil ativo
-  List<VideoModel> getAllowedVideos(ProfileProvider profileProvider) {
-    final allowedIds = profileProvider.selectedProfile?.allowedVideoIds ?? [];
+  /// ✅ Retorna vídeos de uma lista específica
+  List<VideoModel> getVideosForList(List<String> videoIds) {
     return _allCachedVideos
-        .where((video) => allowedIds.contains(video.id))
+        .where((video) => videoIds.contains(video.id))
         .toList();
-  }
-
-  List<VideoModel> getCachedVideosByIds(List<String> ids) {
-    return _allCachedVideos.where((video) => ids.contains(video.id)).toList();
-  }
-
-  void setAllowedVideos(List<VideoModel> value) {
-    allowedVideos = value;
   }
 }

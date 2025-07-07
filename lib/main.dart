@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:my_tube_list/models/video_list_model.dart';
+import 'package:my_tube_list/pages/videos_page.dart';
+import 'package:my_tube_list/providers/video_list_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:my_tube_list/models/profile_model.dart';
 import 'package:my_tube_list/pages/splash_page.dart';
@@ -24,6 +27,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(VideoModelAdapter());
   Hive.registerAdapter(ProfileModelAdapter());
+  Hive.registerAdapter(VideoListModelAdapter());
 
   final profileProvider = ProfileProvider();
   await profileProvider.init();
@@ -31,11 +35,15 @@ void main() async {
   final videoProvider = VideoProvider();
   await videoProvider.init();
 
+  final videoListProvider = VideoListProvider();
+  await videoListProvider.init();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => profileProvider),
         ChangeNotifierProvider(create: (_) => videoProvider),
+        ChangeNotifierProvider(create: (_) => videoListProvider),
       ],
       child: MyApp(),
     ),
@@ -57,25 +65,37 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (_) => const SplashPage(),
         '/profile': (_) => const ProfilePage(),
-        '/home': (_) => const HomePage(),
-        '/search': (_) => const SearchPage(),
+        '/home': (_) => HomePage(),
+        '/search': (context) {
+          final listId = ModalRoute.of(context)!.settings.arguments as String;
+          return SearchPage(listId: listId);
+        },
         '/player': (context) {
-          final video =
-              ModalRoute.of(context)!.settings.arguments as VideoModel;
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
 
-          // providers
-          final videoProvider =
-              Provider.of<VideoProvider>(context, listen: false);
-          final profileProvider =
-              Provider.of<ProfileProvider>(context, listen: false);
-
-          final allowedVideos = videoProvider.getAllowedVideos(profileProvider);
-
-          final index = allowedVideos.indexWhere((v) => v.id == video.id);
+          final String listId = args['listId'];
+          final int currentIndex = args['currentIndex'] ?? 0;
+          final List<VideoModel> videos = args['videos'];
 
           return PlayerPage(
-            allowedVideos: allowedVideos,
-            initialIndex: index >= 0 ? index : 0,
+            listId: listId,
+            videos: videos,
+            currentIndex: currentIndex,
+          );
+        },
+        '/videos': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+
+          final String listId = args['listId'];
+          final String listName = args['listName'];
+          final List<VideoModel> videos = args['videos'];
+
+          return VideosPage(
+            listId: listId,
+            listName: listName,
+            videos: videos,
           );
         },
       },

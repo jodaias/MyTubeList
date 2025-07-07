@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'package:my_tube_list/models/video_list_model.dart';
 
 part 'profile_model.g.dart';
 
@@ -11,7 +12,7 @@ class ProfileModel extends HiveObject {
   final String name;
 
   @HiveField(2)
-  final List<String> allowedVideoIds;
+  final List<VideoListModel> videoLists;
 
   @HiveField(3)
   final String? password;
@@ -25,7 +26,7 @@ class ProfileModel extends HiveObject {
   ProfileModel({
     required this.id,
     required this.name,
-    this.allowedVideoIds = const [],
+    this.videoLists = const [],
     this.password,
     this.securityQuestion,
     this.securityAnswer,
@@ -34,7 +35,7 @@ class ProfileModel extends HiveObject {
   ProfileModel copyWith({
     String? id,
     String? name,
-    List<String>? allowedVideoIds,
+    List<VideoListModel>? videoLists,
     String? password,
     String? securityQuestion,
     String? securityAnswer,
@@ -42,7 +43,7 @@ class ProfileModel extends HiveObject {
     return ProfileModel(
       id: id ?? this.id,
       name: name ?? this.name,
-      allowedVideoIds: allowedVideoIds ?? this.allowedVideoIds,
+      videoLists: videoLists ?? this.videoLists,
       password: password ?? this.password,
       securityQuestion: securityQuestion ?? this.securityQuestion,
       securityAnswer: securityAnswer ?? this.securityAnswer,
@@ -53,7 +54,7 @@ class ProfileModel extends HiveObject {
     return {
       'id': id,
       'name': name,
-      'allowedVideoIds': allowedVideoIds,
+      'videoLists': videoLists,
       'password': password,
       'securityQuestion': securityQuestion,
       'securityAnswer': securityAnswer,
@@ -64,7 +65,7 @@ class ProfileModel extends HiveObject {
     return ProfileModel(
       id: map['id'],
       name: map['name'],
-      allowedVideoIds: List<String>.from(map['allowedVideoIds']),
+      videoLists: List<VideoListModel>.from(map['videoLists']),
       password: map['password'],
       securityQuestion: map['securityQuestion'],
       securityAnswer: map['securityAnswer'],

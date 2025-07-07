@@ -25,18 +25,21 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   Future<void> createProfile(
-      String name, String password, String question, String answer) async {
+    String name,
+    String password,
+    String question,
+    String answer,
+  ) async {
     final id = Uuid().v4();
     final profile = ProfileModel(
       id: id,
       name: name,
-      allowedVideoIds: [],
       password: password.isEmpty ? null : password,
       securityQuestion: question.isEmpty ? null : question,
       securityAnswer: answer.isEmpty ? null : answer,
     );
     await _box.put(id, profile);
-    _profiles.add(profile);
+    setProfiles();
     notifyListeners();
   }
 
@@ -66,31 +69,6 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addAllowedVideo(String videoId) async {
-    if (_selectedProfile == null) return;
-    final updatedList = List<String>.from(_selectedProfile!.allowedVideoIds)
-      ..add(videoId);
-    final updatedProfile =
-        _selectedProfile!.copyWith(allowedVideoIds: updatedList);
-    await _box.put(updatedProfile.id, updatedProfile);
-
-    _selectedProfile = _box.get(updatedProfile.id);
-    ;
-    notifyListeners();
-  }
-
-  Future<void> removeAllowedVideo(String videoId) async {
-    if (_selectedProfile == null) return;
-    final updatedList = List<String>.from(_selectedProfile!.allowedVideoIds)
-      ..remove(videoId);
-    final updatedProfile =
-        _selectedProfile!.copyWith(allowedVideoIds: updatedList);
-    await _box.put(updatedProfile.id, updatedProfile);
-
-    _selectedProfile = _box.get(updatedProfile.id);
-    notifyListeners();
-  }
-
   Future<void> setProfilePassword(String profileId, String password) async {
     final profile = _profiles.firstWhere((p) => p.id == profileId);
     final updatedProfile = profile.copyWith(password: password);
@@ -100,17 +78,6 @@ class ProfileProvider extends ChangeNotifier {
     if (_selectedProfile?.id == profileId) {
       _selectedProfile = _box.get(updatedProfile.id);
     }
-    notifyListeners();
-  }
-
-  Future<void> updateAllowedVideoOrder(List<String> newOrder) async {
-    if (_selectedProfile == null) return;
-
-    final updatedProfile =
-        _selectedProfile!.copyWith(allowedVideoIds: newOrder);
-    await _box.put(updatedProfile.id, updatedProfile);
-
-    _selectedProfile = _box.get(updatedProfile.id);
     notifyListeners();
   }
 }

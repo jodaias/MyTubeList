@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:my_tube_list/providers/profile_provider.dart';
-import 'package:my_tube_list/providers/video_provider.dart';
+import 'package:my_tube_list/providers/video_list_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/video_model.dart';
 
 class PlayerPage extends StatefulWidget {
-  final List<VideoModel> allowedVideos;
-  final int initialIndex;
+  final List<VideoModel> videos;
+  final String listId;
+  final int currentIndex;
 
   const PlayerPage({
     Key? key,
-    required this.allowedVideos,
-    required this.initialIndex,
+    required this.videos,
+    required this.listId,
+    this.currentIndex = 0,
   }) : super(key: key);
 
   @override
@@ -21,11 +22,10 @@ class PlayerPage extends StatefulWidget {
 
 class _PlayerPageState extends State<PlayerPage> {
   late YoutubePlayerController _controller;
-  late int _currentIndex;
-  late VideoProvider _videoProvider;
-  late ProfileProvider _profileProvider;
+
   final ScrollController _scrollController = ScrollController();
 
+  late int _currentIndex;
   bool _showList = false;
   bool _repeat = false;
   bool _currentStatusPlaying = true;
@@ -36,15 +36,14 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   void initState() {
     super.initState();
-    _profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    _videoProvider = Provider.of<VideoProvider>(context, listen: false);
 
-    _currentIndex = widget.initialIndex;
+    _currentIndex = widget.currentIndex;
+
     _setupController();
 
     // inicializa keys
     _itemKeys = List.generate(
-      widget.allowedVideos.length,
+      widget.videos.length,
       (_) => GlobalKey(),
     );
 
@@ -61,8 +60,7 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _setupController() {
-    _videoProvider.setAllowedVideos(widget.allowedVideos);
-    final video = widget.allowedVideos[_currentIndex];
+    final video = widget.videos[_currentIndex];
 
     _controller = YoutubePlayerController(
       initialVideoId: video.id,
@@ -103,8 +101,7 @@ class _PlayerPageState extends State<PlayerPage> {
     setState(() {
       if (_currentIndex != index) _repeat = false;
       _currentIndex = index;
-      _controller.load(widget.allowedVideos[_currentIndex].id,
-          startAt: startAt);
+      _controller.load(widget.videos[_currentIndex].id, startAt: startAt);
     });
   }
 
@@ -168,7 +165,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        widget.allowedVideos[_currentIndex].title,
+                        widget.videos[_currentIndex].title,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -202,7 +199,7 @@ class _PlayerPageState extends State<PlayerPage> {
             onEnded: (data) {
               var nextIndex = _currentIndex;
               if (!_repeat) {
-                nextIndex = (_currentIndex + 1) % widget.allowedVideos.length;
+                nextIndex = (_currentIndex + 1) % widget.videos.length;
               }
               _playVideo(nextIndex);
             },
@@ -222,7 +219,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      widget.allowedVideos[_currentIndex].title,
+                      widget.videos[_currentIndex].title,
                       style: const TextStyle(color: Colors.white),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -257,6 +254,7 @@ class _PlayerPageState extends State<PlayerPage> {
               duration: Duration(milliseconds: 500),
               curve: Curves.easeInOut,
               width: _showList ? MediaQuery.of(context).size.width * 0.25 : 0,
+              height: MediaQuery.of(context).size.height,
               child: Material(
                 color: Colors.white,
                 child: Container(
@@ -285,6 +283,9 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildVideoListToFullscren() {
+    final _videoListProvider =
+        Provider.of<VideoListProvider>(context, listen: false);
+
     return ReorderableListView.builder(
       scrollController: _scrollController,
       buildDefaultDragHandles: false,
@@ -292,9 +293,8 @@ class _PlayerPageState extends State<PlayerPage> {
         setState(() {
           if (newIndex > oldIndex) newIndex -= 1;
 
-          final video = widget.allowedVideos.removeAt(oldIndex);
-          widget.allowedVideos.insert(newIndex, video);
-          _videoProvider.setAllowedVideos(widget.allowedVideos);
+          final video = widget.videos.removeAt(oldIndex);
+          widget.videos.insert(newIndex, video);
 
           if (_currentIndex == oldIndex) {
             _currentIndex = newIndex;
@@ -307,11 +307,16 @@ class _PlayerPageState extends State<PlayerPage> {
           // Também reordena as keys para manter sincronização
           final key = _itemKeys.removeAt(oldIndex);
           _itemKeys.insert(newIndex, key);
+
+          _videoListProvider.updateVideoOrder(
+            listId: widget.listId,
+            newOrder: widget.videos,
+          );
         });
       },
-      itemCount: widget.allowedVideos.length,
+      itemCount: widget.videos.length,
       itemBuilder: (context, index) {
-        final video = widget.allowedVideos[index];
+        final video = widget.videos[index];
         final isPlaying = index == _currentIndex;
 
         return KeyedSubtree(
@@ -405,9 +410,8 @@ class _PlayerPageState extends State<PlayerPage> {
       onReorder: (oldIndex, newIndex) async {
         setState(() {
           if (newIndex > oldIndex) newIndex -= 1;
-          final video = widget.allowedVideos.removeAt(oldIndex);
-          widget.allowedVideos.insert(newIndex, video);
-          _videoProvider.setAllowedVideos(widget.allowedVideos);
+          final video = widget.videos.removeAt(oldIndex);
+          widget.videos.insert(newIndex, video);
 
           if (_currentIndex == oldIndex) {
             _currentIndex = newIndex;
@@ -421,64 +425,94 @@ class _PlayerPageState extends State<PlayerPage> {
           final key = _itemKeys.removeAt(oldIndex);
           _itemKeys.insert(newIndex, key);
         });
-
-        await _profileProvider.updateAllowedVideoOrder(
-          widget.allowedVideos.map((v) => v.id).toList(),
-        );
       },
-      itemCount: widget.allowedVideos.length,
+      itemCount: widget.videos.length,
       itemBuilder: (context, index) {
-        final video = widget.allowedVideos[index];
+        final video = widget.videos[index];
 
         return KeyedSubtree(
           key: _itemKeys[index],
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-            selected: index == _currentIndex,
-            selectedTileColor: Colors.green[800],
-            leading: ReorderableDragStartListener(
-              index: index,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.drag_handle,
-                    color: index == _currentIndex
-                        ? Colors.white
-                        : Colors.grey.shade700,
-                  ),
-                  const SizedBox(width: 5),
-                  SizedBox(
-                    height: 60,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Image.network(
-                        video.thumbnailUrl,
-                        fit: BoxFit.cover,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.shade400,
+                  width: 0.5,
+                ),
+              ),
+            ),
+            child: ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              selected: index == _currentIndex,
+              selectedTileColor: Colors.green[800],
+              leading: ReorderableDragStartListener(
+                index: index,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.drag_handle,
+                      color: index == _currentIndex
+                          ? Colors.white
+                          : Colors.grey.shade700,
+                    ),
+                    const SizedBox(width: 5),
+                    SizedBox(
+                      height: 60,
+                      width: 100, // 🔑 define largura para o thumbnail
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              video.thumbnailUrl,
+                              height: 60,
+                              width: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          if (_currentIndex == index)
+                            Positioned(
+                              bottom: 4,
+                              right: 4,
+                              child: _controller.value.isPlaying
+                                  ? Image.asset(
+                                      'assets/gifs/playing.gif',
+                                      width: 30,
+                                      height: 30,
+                                    )
+                                  : Image.asset(
+                                      'assets/images/paused.png',
+                                      width: 30,
+                                      height: 30,
+                                    ),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            trailing: _currentIndex == index && _repeat
-                ? const Icon(Icons.repeat_one, color: Colors.white)
-                : null,
-            title: Text(
-              video.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: index == _currentIndex
-                    ? Colors.white
-                    : Colors.grey.shade700,
+              trailing: _currentIndex == index && _repeat
+                  ? const Icon(Icons.repeat_one, color: Colors.white)
+                  : null,
+              title: Text(
+                video.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: index == _currentIndex
+                      ? Colors.white
+                      : Colors.grey.shade700,
+                ),
               ),
+              onTap: () {
+                if (_currentIndex != index) {
+                  _playVideo(index);
+                }
+              },
             ),
-            onTap: () {
-              if (_currentIndex != index) {
-                _playVideo(index);
-              }
-            },
           ),
         );
       },
