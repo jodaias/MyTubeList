@@ -138,8 +138,6 @@ class HomePage extends StatelessWidget {
                       onTap: () {
                         Navigator.pushNamed(context, '/videos', arguments: {
                           'listId': list.id,
-                          'listName': list.name,
-                          'videos': list.videos,
                         });
                       },
                       child: Stack(

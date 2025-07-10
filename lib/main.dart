@@ -89,13 +89,9 @@ class MyApp extends StatelessWidget {
               as Map<String, dynamic>;
 
           final String listId = args['listId'];
-          final String listName = args['listName'];
-          final List<VideoModel> videos = args['videos'];
 
           return VideosPage(
             listId: listId,
-            listName: listName,
-            videos: videos,
           );
         },
       },

@@ -21,6 +21,10 @@ class VideoListProvider extends ChangeNotifier {
     return _lists.where((l) => l.profileId == profileId).toList();
   }
 
+  VideoListModel getListById(String listId) {
+    return _lists.firstWhere((l) => l.id == listId);
+  }
+
   Future<String> createList(String name, String profileId) async {
     final list = VideoListModel(
       id: Uuid().v4(),

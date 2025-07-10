@@ -210,7 +210,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                icon: const Icon(Icons.menu),
+                icon: const Icon(Icons.arrow_back_ios),
                 color: Colors.white,
               ),
               backgroundColor: Colors.green[700],

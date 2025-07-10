@@ -43,16 +43,22 @@ class VideoCard extends StatelessWidget {
                 // Botão de deletar se existir callback
                 if (onDeleteConfirmed != null)
                   Positioned(
-                    top: 5,
-                    right: 15,
-                    child: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        await onDeleteConfirmed!();
-                      },
-                      splashRadius: 20,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        color: Colors.white,
+                        iconSize: 24,
+                        onPressed: () async {
+                          await onDeleteConfirmed!();
+                        },
+                        splashRadius: 20,
+                      ),
                     ),
                   ),
 
