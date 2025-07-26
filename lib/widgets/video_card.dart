@@ -7,14 +7,18 @@ class VideoCard extends StatelessWidget {
 
   final Future<void> Function()? onDeleteConfirmed;
   final Future<void> Function()? onAddConfirmed;
+  final Future<void> Function()? onRemoveConfirmed;
   final bool isAdded;
+  final bool showPlayButton;
 
   const VideoCard({
     required this.video,
     this.onTap,
     this.isAdded = false,
+    this.showPlayButton = false,
     this.onAddConfirmed = null,
     this.onDeleteConfirmed = null,
+    this.onRemoveConfirmed = null,
     Key? key,
   }) : super(key: key);
 
@@ -40,6 +44,30 @@ class VideoCard extends StatelessWidget {
                   ),
                 ),
 
+                // Botão de play grande no centro
+                if (showPlayButton)
+                  Positioned.fill(
+                    child: Center(
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                          onPressed: onTap,
+                          splashRadius: 30,
+                        ),
+                      ),
+                    ),
+                  ),
+
                 // Botão de deletar se existir callback
                 if (onDeleteConfirmed != null)
                   Positioned(
@@ -62,26 +90,37 @@ class VideoCard extends StatelessWidget {
                     ),
                   ),
 
-                if (onAddConfirmed != null)
+                // Botão de adicionar/remover
+                if (onAddConfirmed != null || onRemoveConfirmed != null)
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: IconButton(
-                      icon: Icon(
-                        isAdded ? Icons.check_circle : Icons.add_circle_outline,
-                        color: isAdded ? Colors.green : Colors.blue,
-                        size: 35,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.8),
+                        shape: BoxShape.circle,
                       ),
-                      onPressed: isAdded
-                          ? null
-                          : () async {
-                              await onAddConfirmed!();
-                            },
-                      splashRadius: 20,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                      child: IconButton(
+                        icon: Icon(
+                          isAdded
+                              ? Icons.remove_circle_outline
+                              : Icons.add_circle_outline,
+                          color: isAdded ? Colors.red : Colors.blue,
+                          size: 35,
+                        ),
+                        onPressed: () async {
+                          if (isAdded && onRemoveConfirmed != null) {
+                            await onRemoveConfirmed!();
+                          } else if (!isAdded && onAddConfirmed != null) {
+                            await onAddConfirmed!();
+                          }
+                        },
+                        splashRadius: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
                     ),
-                  ),
+                  )
               ],
             ),
             const SizedBox(height: 8),

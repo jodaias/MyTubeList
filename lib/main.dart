@@ -65,7 +65,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (_) => const SplashPage(),
         '/profile': (_) => const ProfilePage(),
-        '/home': (_) => HomePage(),
+        '/home': (_) => const HomePage(),
         '/search': (context) {
           final listId = ModalRoute.of(context)!.settings.arguments as String;
           return SearchPage(listId: listId);

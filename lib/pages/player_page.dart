@@ -194,7 +194,7 @@ class _PlayerPageState extends State<PlayerPage> {
               CurrentPosition(),
               ProgressBar(isExpanded: true),
               RemainingDuration(),
-              const FullScreenButton(),
+              FullScreenButton(),
             ],
             onEnded: (data) {
               var nextIndex = _currentIndex;

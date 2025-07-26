@@ -65,6 +65,7 @@ class _VideosPageState extends State<VideosPage> {
                   final video = videos[index];
                   return VideoCard(
                     video: video,
+                    showPlayButton: true,
                     onTap: () {
                       Navigator.pushNamed(context, '/player', arguments: {
                         'listId': widget.listId,

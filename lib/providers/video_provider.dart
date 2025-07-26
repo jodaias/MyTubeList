@@ -69,10 +69,14 @@ class VideoProvider extends ChangeNotifier {
   }
 
   Future<void> loadPreviousSearches(String profileId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'previousSearches_$profileId';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'previousSearches_$profileId';
 
-    _previousSearches = prefs.getStringList(key) ?? [];
+      _previousSearches = prefs.getStringList(key) ?? [];
+    } catch (e) {
+      _previousSearches = [];
+    }
     notifyListeners();
   }
 

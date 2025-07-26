@@ -28,6 +28,7 @@ class _SearchPageState extends State<SearchPage> {
         videoListProvider.lists.firstWhere((l) => l.id == widget.listId);
 
     Future<void> _search(String query) async {
+      if (query.isEmpty) return;
       FocusScope.of(context).unfocus();
       setState(() => loading = true);
       videos = await videoProvider.search(query);
@@ -59,6 +60,7 @@ class _SearchPageState extends State<SearchPage> {
               controller: _controller,
               decoration: const InputDecoration(labelText: 'Pesquisar'),
               textInputAction: TextInputAction.search,
+              onChanged: (value) => setState(() {}),
               onSubmitted: _search,
             ),
           ),
@@ -82,7 +84,9 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ElevatedButton(
-            onPressed: () => _search(_controller.text),
+            onPressed: _controller.text.isNotEmpty
+                ? () => _search(_controller.text)
+                : null,
             child: const Text('Buscar'),
           ),
           if (loading) const CircularProgressIndicator(),
@@ -108,6 +112,13 @@ class _SearchPageState extends State<SearchPage> {
                       await videoListProvider.addVideoToList(
                           widget.listId, video);
                       await videoProvider.cacheVideo(video);
+                      setState(() {});
+                    }
+                  },
+                  onRemoveConfirmed: () async {
+                    if (isAdded) {
+                      await videoListProvider.removeVideoFromList(
+                          widget.listId, video.id);
                       setState(() {});
                     }
                   },

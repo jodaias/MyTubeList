@@ -6,7 +6,25 @@ import 'package:provider/provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/video_list_provider.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  @override
+  void initState() {
+    super.initState();
+    // Aguarde o selectedProfile ser carregado, se necessário
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final selectedProfile = context.read<ProfileProvider>().selectedProfile;
+      if (selectedProfile != null) {
+        context.read<VideoProvider>().loadPreviousSearches(selectedProfile.id);
+      }
+    });
+  }
+
   void _logout(BuildContext context, ProfileProvider _profileProvider) async {
     await _profileProvider.clearProfile();
     Navigator.pushNamedAndRemoveUntil(context, '/profile', (_) => false);
@@ -41,9 +59,6 @@ class HomePage extends StatelessWidget {
 
     final selectedProfile = profileProvider.selectedProfile;
     final lists = videoListProvider.getListsByProfile(selectedProfile!.id);
-
-    final videoProvider = context.watch<VideoProvider>();
-    videoProvider.loadPreviousSearches(selectedProfile.id);
 
     return Scaffold(
       appBar: AppBar(
