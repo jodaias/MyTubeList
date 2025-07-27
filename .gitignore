@@ -43,6 +43,23 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android build files
+/android/app/.cxx/
+/android/app/build/
+/android/build/
+/android/gradle/
+/android/.gradle/
+/android/local.properties
+/android/key.properties
+
+# Generated files
+*.iml
+*.lock
+*.log
+*.tmp
+*.temp
+
+# Environment files
 .env
 
 # FVM Version Cache

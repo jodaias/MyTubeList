@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir leitura de usuários para login (sem autenticação)
+    match /users/{userId} {
+      allow read: if true; // Permite leitura para login
+      allow write: if request.auth != null && request.auth.uid == userId; // Apenas o próprio usuário pode escrever
+    }
+
+    // Subcollections do usuário
+    match /users/{userId}/{subcollection}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

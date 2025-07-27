@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:my_tube_list/providers/video_list_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/video_model.dart';
+import '../providers/firebase_video_list_provider.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class PlayerPage extends StatefulWidget {
   final List<VideoModel> videos;
@@ -206,6 +206,7 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
           builder: (context, player) => Scaffold(
             appBar: AppBar(
+              iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -283,8 +284,8 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildVideoListToFullscren() {
-    final _videoListProvider =
-        Provider.of<VideoListProvider>(context, listen: false);
+    final firebaseVideoListProvider =
+        Provider.of<FirebaseVideoListProvider>(context, listen: false);
 
     return ReorderableListView.builder(
       scrollController: _scrollController,
@@ -308,7 +309,7 @@ class _PlayerPageState extends State<PlayerPage> {
           final key = _itemKeys.removeAt(oldIndex);
           _itemKeys.insert(newIndex, key);
 
-          _videoListProvider.updateVideoOrder(
+          firebaseVideoListProvider.updateVideoOrder(
             listId: widget.listId,
             newOrder: widget.videos,
           );

@@ -11,6 +11,9 @@ class ProfileModel extends HiveObject {
   @HiveField(1)
   final String name;
 
+  @HiveField(6)
+  final String username;
+
   @HiveField(2)
   final List<VideoListModel> videoLists;
 
@@ -26,6 +29,7 @@ class ProfileModel extends HiveObject {
   ProfileModel({
     required this.id,
     required this.name,
+    required this.username,
     this.videoLists = const [],
     this.password,
     this.securityQuestion,
@@ -35,6 +39,7 @@ class ProfileModel extends HiveObject {
   ProfileModel copyWith({
     String? id,
     String? name,
+    String? username,
     List<VideoListModel>? videoLists,
     String? password,
     String? securityQuestion,
@@ -43,6 +48,7 @@ class ProfileModel extends HiveObject {
     return ProfileModel(
       id: id ?? this.id,
       name: name ?? this.name,
+      username: username ?? this.username,
       videoLists: videoLists ?? this.videoLists,
       password: password ?? this.password,
       securityQuestion: securityQuestion ?? this.securityQuestion,
@@ -54,6 +60,7 @@ class ProfileModel extends HiveObject {
     return {
       'id': id,
       'name': name,
+      'username': username,
       'videoLists': videoLists,
       'password': password,
       'securityQuestion': securityQuestion,
@@ -65,6 +72,7 @@ class ProfileModel extends HiveObject {
     return ProfileModel(
       id: map['id'],
       name: map['name'],
+      username: map['username'],
       videoLists: List<VideoListModel>.from(map['videoLists']),
       password: map['password'],
       securityQuestion: map['securityQuestion'],

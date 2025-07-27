@@ -19,6 +19,7 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
     return ProfileModel(
       id: fields[0] as String,
       name: fields[1] as String,
+      username: fields[6] as String,
       videoLists: (fields[2] as List).cast<VideoListModel>(),
       password: fields[3] as String?,
       securityQuestion: fields[4] as String?,
@@ -29,11 +30,13 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
   @override
   void write(BinaryWriter writer, ProfileModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.name)
+      ..writeByte(6)
+      ..write(obj.username)
       ..writeByte(2)
       ..write(obj.videoLists)
       ..writeByte(3)

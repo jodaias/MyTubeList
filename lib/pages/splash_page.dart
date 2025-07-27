@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/firebase_profile_provider.dart';
+import '../providers/firebase_video_list_provider.dart'; // Added import for FirebaseVideoListProvider
 
 class SplashPage extends StatefulWidget {
   const SplashPage({Key? key}) : super(key: key);
@@ -21,8 +24,21 @@ class _SplashPageState extends State<SplashPage>
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacementNamed('/profile');
+    // Verificar se usuário está logado após 3 segundos
+    Future.delayed(const Duration(seconds: 3), () async {
+      final firebaseProvider = context.read<FirebaseProfileProvider>();
+      // final localProvider = context.read<ProfileProvider>(); // Removido
+
+      try {
+        await firebaseProvider.checkAuthStatus();
+      } catch (e) {
+        // Continua mesmo com erro do Firebase
+      }
+
+      if (mounted) {
+        // Sempre redirecionar para página de perfis como página inicial
+        Navigator.of(context).pushReplacementNamed('/profiles');
+      }
     });
   }
 
