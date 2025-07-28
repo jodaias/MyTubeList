@@ -102,6 +102,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                   hintText: 'Ex: joao123',
                 ),
                 enabled: !isLoading, // Desabilitar durante loading
+                autofocus: true,
                 onChanged: (value) {
                   // Remover espaços, acentos e converter para minúsculo
                   String cleanValue = value
@@ -273,211 +274,214 @@ class _ProfilesPageState extends State<ProfilesPage>
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Adicionar Novo Perfil'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome do perfil',
-                    hintText: 'Ex: João',
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome do perfil',
+                      hintText: 'Ex: João',
+                    ),
+                    autofocus: true,
+                    onChanged: (value) {
+                      // Permitir apenas letras, espaços e apóstrofos
+                      String cleanValue = value
+                          .replaceAll(RegExp(r'[0-9]'), '')
+                          .replaceAll(RegExp(r"[^\p{L}\s']", unicode: true), '')
+                          .replaceAll(RegExp(r'\s+'), ' ')
+                          .trim();
+                      if (value != cleanValue) {
+                        nameController.value = TextEditingValue(
+                          text: cleanValue,
+                          selection: TextSelection.collapsed(
+                              offset: cleanValue.length),
+                        );
+                      }
+                      setState(() {});
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Digite um nome para o perfil';
+                      }
+                      if (value.length < 2) {
+                        return 'O nome deve ter pelo menos 2 caracteres';
+                      }
+                      if (value.length > 30) {
+                        return 'O nome deve ter no máximo 30 caracteres';
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
-                  autofocus: true,
-                  onChanged: (value) {
-                    // Permitir apenas letras, espaços e apóstrofos
-                    String cleanValue = value
-                        .replaceAll(RegExp(r'[0-9]'), '')
-                        .replaceAll(RegExp(r"[^\p{L}\s']", unicode: true), '')
-                        .replaceAll(RegExp(r'\s+'), ' ')
-                        .trim();
-                    if (value != cleanValue) {
-                      nameController.value = TextEditingValue(
-                        text: cleanValue,
-                        selection:
-                            TextSelection.collapsed(offset: cleanValue.length),
-                      );
-                    }
-                    setState(() {});
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Digite um nome para o perfil';
-                    }
-                    if (value.length < 2) {
-                      return 'O nome deve ter pelo menos 2 caracteres';
-                    }
-                    if (value.length > 30) {
-                      return 'O nome deve ter no máximo 30 caracteres';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Nome de usuário',
-                    hintText: 'Ex: joao123',
-                    suffixIcon: isCheckingUsername
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) async {
-                    String cleanValue = value
-                        .toLowerCase()
-                        .replaceAll(RegExp(r'\s'), '')
-                        .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                        .replaceAll(RegExp(r'[éèêë]'), 'e')
-                        .replaceAll(RegExp(r'[íìîï]'), 'i')
-                        .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                        .replaceAll(RegExp(r'[úùûü]'), 'u')
-                        .replaceAll(RegExp(r'[çÇ]'), 'c')
-                        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
-                    if (value != cleanValue) {
-                      usernameController.value = TextEditingValue(
-                        text: cleanValue,
-                        selection:
-                            TextSelection.collapsed(offset: cleanValue.length),
-                      );
-                    }
-                    if (cleanValue.length >= 4) {
-                      setState(() {
-                        isCheckingUsername = true;
-                        usernameError = null;
-                      });
-                      try {
-                        final firebaseProfileProvider =
-                            context.read<FirebaseProfileProvider>();
-                        final exists = await firebaseProfileProvider
-                            .checkUsernameExists(cleanValue);
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: usernameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nome de usuário',
+                      hintText: 'Ex: joao123',
+                      suffixIcon: isCheckingUsername
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) async {
+                      String cleanValue = value
+                          .toLowerCase()
+                          .replaceAll(RegExp(r'\s'), '')
+                          .replaceAll(RegExp(r'[áàâãä]'), 'a')
+                          .replaceAll(RegExp(r'[éèêë]'), 'e')
+                          .replaceAll(RegExp(r'[íìîï]'), 'i')
+                          .replaceAll(RegExp(r'[óòôõö]'), 'o')
+                          .replaceAll(RegExp(r'[úùûü]'), 'u')
+                          .replaceAll(RegExp(r'[çÇ]'), 'c')
+                          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+                      if (value != cleanValue) {
+                        usernameController.value = TextEditingValue(
+                          text: cleanValue,
+                          selection: TextSelection.collapsed(
+                              offset: cleanValue.length),
+                        );
+                      }
+                      if (cleanValue.length >= 4) {
                         setState(() {
-                          isCheckingUsername = false;
-                          if (exists) {
-                            usernameError = 'Nome de usuário já está em uso';
-                          } else {
-                            usernameError = null;
-                          }
+                          isCheckingUsername = true;
+                          usernameError = null;
                         });
-                      } catch (e) {
+                        try {
+                          final firebaseProfileProvider =
+                              context.read<FirebaseProfileProvider>();
+                          final exists = await firebaseProfileProvider
+                              .checkUsernameExists(cleanValue);
+                          setState(() {
+                            isCheckingUsername = false;
+                            if (exists) {
+                              usernameError = 'Nome de usuário já está em uso';
+                            } else {
+                              usernameError = null;
+                            }
+                          });
+                        } catch (e) {
+                          setState(() {
+                            isCheckingUsername = false;
+                          });
+                        }
+                      } else {
                         setState(() {
                           isCheckingUsername = false;
+                          usernameError = null;
                         });
                       }
-                    } else {
-                      setState(() {
-                        isCheckingUsername = false;
-                        usernameError = null;
-                      });
-                    }
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Digite um nome de usuário';
-                    }
-                    if (value.length < 3) {
-                      return 'O nome de usuário deve ter pelo menos 3 caracteres';
-                    }
-                    if (value.length > 20) {
-                      return 'O nome de usuário deve ter no máximo 20 caracteres';
-                    }
-                    if (usernameError != null) {
-                      return usernameError;
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Senha',
-                    hintText: 'Ex: 123456',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        isPasswordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                        color: Colors.grey[600],
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Digite um nome de usuário';
+                      }
+                      if (value.length < 3) {
+                        return 'O nome de usuário deve ter pelo menos 3 caracteres';
+                      }
+                      if (value.length > 20) {
+                        return 'O nome de usuário deve ter no máximo 20 caracteres';
+                      }
+                      if (usernameError != null) {
+                        return usernameError;
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Senha',
+                      hintText: 'Ex: 123456',
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey[600],
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            isPasswordVisible = !isPasswordVisible;
+                          });
+                        },
                       ),
-                      onPressed: () {
-                        setState(() {
-                          isPasswordVisible = !isPasswordVisible;
-                        });
-                      },
                     ),
+                    obscureText: !isPasswordVisible,
+                    onChanged: (value) {
+                      String cleanValue = value
+                          .replaceAll(RegExp(r'\s'), '')
+                          .replaceAll(RegExp(r'[áàâãä]'), 'a')
+                          .replaceAll(RegExp(r'[éèêë]'), 'e')
+                          .replaceAll(RegExp(r'[íìîï]'), 'i')
+                          .replaceAll(RegExp(r'[óòôõö]'), 'o')
+                          .replaceAll(RegExp(r'[úùûü]'), 'u');
+                      if (value != cleanValue) {
+                        passwordController.value = TextEditingValue(
+                          text: cleanValue,
+                          selection: TextSelection.collapsed(
+                              offset: cleanValue.length),
+                        );
+                      }
+                      setState(() {});
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Digite uma senha';
+                      }
+                      if (value.length < 6) {
+                        return 'A senha deve ter pelo menos 6 caracteres';
+                      }
+                      if (value.length > 25) {
+                        return 'A senha deve ter no máximo 25 caracteres';
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
-                  obscureText: !isPasswordVisible,
-                  onChanged: (value) {
-                    String cleanValue = value
-                        .replaceAll(RegExp(r'\s'), '')
-                        .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                        .replaceAll(RegExp(r'[éèêë]'), 'e')
-                        .replaceAll(RegExp(r'[íìîï]'), 'i')
-                        .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                        .replaceAll(RegExp(r'[úùûü]'), 'u');
-                    if (value != cleanValue) {
-                      passwordController.value = TextEditingValue(
-                        text: cleanValue,
-                        selection:
-                            TextSelection.collapsed(offset: cleanValue.length),
-                      );
-                    }
-                    setState(() {});
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Digite uma senha';
-                    }
-                    if (value.length < 6) {
-                      return 'A senha deve ter pelo menos 6 caracteres';
-                    }
-                    if (value.length > 25) {
-                      return 'A senha deve ter no máximo 25 caracteres';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<UserCategory>(
-                  decoration: const InputDecoration(
-                    labelText: 'Categoria',
-                    hintText: 'Selecione a categoria do perfil',
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<UserCategory>(
+                    decoration: const InputDecoration(
+                      labelText: 'Categoria',
+                      hintText: 'Selecione a categoria do perfil',
+                    ),
+                    value: selectedCategory,
+                    items: UserCategory.values
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category.displayName),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          selectedCategory = value;
+                        });
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Selecione uma categoria';
+                      }
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.disabled,
                   ),
-                  value: selectedCategory,
-                  items: UserCategory.values
-                      .map((category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category.displayName),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() {
-                        selectedCategory = value;
-                      });
-                    }
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Selecione uma categoria';
-                    }
-                    return null;
-                  },
-                  autovalidateMode: AutovalidateMode.disabled,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -617,7 +621,7 @@ class _ProfilesPageState extends State<ProfilesPage>
           children: [
             Expanded(
               child: Container(
-                color: Colors.grey.shade200,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: localProfilesProvider.isLoading
                     ? const Center(
                         child: CircularProgressIndicator(
@@ -632,14 +636,20 @@ class _ProfilesPageState extends State<ProfilesPage>
                                 Icon(
                                   Icons.family_restroom,
                                   size: 64,
-                                  color: Colors.grey,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withAlpha((0.7 * 255).toInt()),
                                 ),
                                 SizedBox(height: 16),
                                 Text(
                                   'Nenhum perfil local encontrado',
                                   style: TextStyle(
                                     fontSize: 18,
-                                    color: Colors.grey,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withAlpha((0.7 * 255).toInt()),
                                   ),
                                 ),
                                 SizedBox(height: 8),
@@ -647,7 +657,10 @@ class _ProfilesPageState extends State<ProfilesPage>
                                   'Você pode criar um novo perfil ou\nverificar perfis existentes no Firebase',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withAlpha((0.6 * 255).toInt()),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -665,24 +678,45 @@ class _ProfilesPageState extends State<ProfilesPage>
                                               width: 16,
                                               height: 16,
                                               child: CircularProgressIndicator(
-                                                  strokeWidth: 2),
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                            Color>(
+                                                        Theme.of(context)
+                                                            .colorScheme
+                                                            .onPrimary),
+                                              ),
                                             )
-                                          : Icon(Icons.search),
+                                          : Icon(Icons.search,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary),
                                       label: Text(_isCheckingFirebaseProfiles
                                           ? 'Verificando...'
                                           : 'Verificar Firebase'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue[600],
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
                                       ),
                                     ),
                                     ElevatedButton.icon(
                                       onPressed: () => _addNewProfile(context),
-                                      icon: Icon(Icons.person_add),
+                                      icon: Icon(Icons.person_add,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onPrimary),
                                       label: Text('Novo Perfil'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green[600],
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
                                       ),
                                     ),
                                   ],
@@ -694,7 +728,10 @@ class _ProfilesPageState extends State<ProfilesPage>
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.grey[700],
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withOpacity(0.8),
                                     ),
                                   ),
                                   SizedBox(height: 16),
@@ -704,7 +741,9 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                 horizontal: 16, vertical: 4),
                                             child: ListTile(
                                               leading: Icon(Icons.person,
-                                                  color: Colors.blue[600]),
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primary),
                                               title: Text(profile.name),
                                               subtitle:
                                                   Text('@${profile.username}'),
@@ -713,8 +752,9 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                 children: [
                                                   IconButton(
                                                     icon: Icon(Icons.login,
-                                                        color:
-                                                            Colors.blue[600]),
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary),
                                                     onPressed: () =>
                                                         _loginWithExistingProfile(
                                                             profile),
@@ -722,8 +762,9 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                   ),
                                                   IconButton(
                                                     icon: Icon(Icons.add,
-                                                        color:
-                                                            Colors.green[600]),
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .secondary),
                                                     onPressed: () =>
                                                         _addExistingProfile(
                                                             profile),
@@ -760,6 +801,7 @@ class _ProfilesPageState extends State<ProfilesPage>
 
                                     return Card(
                                       elevation: 4,
+                                      color: Theme.of(context).cardColor,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -792,11 +834,13 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                       profile.name,
                                                       textAlign:
                                                           TextAlign.center,
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         fontSize: 16,
                                                         fontWeight:
                                                             FontWeight.bold,
-                                                        color: Colors.black87,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface,
                                                       ),
                                                       maxLines: 2,
                                                       overflow:
@@ -807,7 +851,12 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                       '@${profile.username}',
                                                       style: TextStyle(
                                                         fontSize: 12,
-                                                        color: Colors.grey[600],
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withAlpha(
+                                                                (0.7 * 255)
+                                                                    .toInt()),
                                                       ),
                                                     ),
                                                     const SizedBox(height: 8),
@@ -815,7 +864,12 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                       'Clique para acessar',
                                                       style: TextStyle(
                                                         fontSize: 12,
-                                                        color: Colors.grey[600],
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withAlpha(
+                                                                (0.7 * 255)
+                                                                    .toInt()),
                                                       ),
                                                     ),
                                                   ],
@@ -828,9 +882,13 @@ class _ProfilesPageState extends State<ProfilesPage>
                                             top: 8,
                                             right: 8,
                                             child: PopupMenuButton<String>(
-                                              icon: const Icon(
+                                              icon: Icon(
                                                 Icons.more_vert,
-                                                color: Colors.grey,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withAlpha(
+                                                        (0.7 * 255).toInt()),
                                                 size: 20,
                                               ),
                                               onSelected: (value) async {

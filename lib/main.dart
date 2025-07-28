@@ -76,8 +76,32 @@ class MyApp extends StatelessWidget {
       title: 'My Tube List',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        brightness: Brightness.light,
         primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.grey[200],
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF388E3C),
+          foregroundColor: Colors.white,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF388E3C),
+          foregroundColor: Colors.white,
+        ),
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.grey[900],
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF222222),
+          foregroundColor: Colors.white,
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: Color(0xFF388E3C),
+          foregroundColor: Colors.white,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       initialRoute: '/',
       routes: {
         '/': (_) => const SplashPage(),

@@ -70,29 +70,34 @@ class _VideosPageState extends State<VideosPage> {
     if (videoList == null) {
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.green[700],
-          title: const Text('Lista não encontrada'),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          title: Text('Lista não encontrada',
+              style: TextStyle(
+                  color: Theme.of(context).appBarTheme.foregroundColor)),
         ),
-        body: const Center(
-          child: Text('Lista não encontrada'),
+        body: Center(
+          child: Text('Lista não encontrada',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         ),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green[700],
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         title: Text(
           videoList.name,
-          style: const TextStyle(color: Colors.white),
+          style:
+              TextStyle(color: Theme.of(context).appBarTheme.foregroundColor),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme:
+            IconThemeData(color: Theme.of(context).appBarTheme.foregroundColor),
         actions: [
           // Botão de seleção
           IconButton(
             icon: Icon(
               _isSelectionMode ? Icons.close : Icons.select_all,
-              color: Colors.white,
+              color: Theme.of(context).appBarTheme.foregroundColor,
             ),
             onPressed: _toggleSelectionMode,
             tooltip: _isSelectionMode ? 'Sair da seleção' : 'Modo seleção',
@@ -144,14 +149,20 @@ class _VideosPageState extends State<VideosPage> {
                   Icon(
                     Icons.video_library,
                     size: 64,
-                    color: Colors.grey[400],
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withAlpha((0.4 * 255).toInt()),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Nenhum vídeo adicionado',
                     style: TextStyle(
                       fontSize: 18,
-                      color: Colors.grey[600],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withAlpha((0.6 * 255).toInt()),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -159,7 +170,10 @@ class _VideosPageState extends State<VideosPage> {
                     'Adicione vídeos à sua lista!',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[500],
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withAlpha((0.5 * 255).toInt()),
                     ),
                   ),
                 ],
