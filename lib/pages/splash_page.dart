@@ -51,7 +51,7 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red[600],
+      backgroundColor: Theme.of(context).colorScheme.primary,
       body: Center(
         child: FadeTransition(
           opacity: _animation,
@@ -63,17 +63,18 @@ class _SplashPageState extends State<SplashPage>
                 width: 120,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'MyTubeList',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 32),
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.onPrimary),
               )
             ],
           ),
