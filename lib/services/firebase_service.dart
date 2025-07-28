@@ -54,7 +54,8 @@ class FirebaseService {
   }
 
   Future<bool> createUserWithPassword(
-      String username, String password, String name) async {
+      String username, String password, String name,
+      {UserCategory? category}) async {
     try {
       // Validar username (sem espaços, acentos, etc.)
       if (!_isValidUsername(username)) {
@@ -85,6 +86,7 @@ class FirebaseService {
         name: name,
         username: username,
         password: hashedPassword,
+        category: category,
       );
 
       await _usersCollection.doc(userCredential.user!.uid).set({
@@ -93,6 +95,7 @@ class FirebaseService {
           'name': profile.name,
           'username': username,
           'password': hashedPassword,
+          'category': category?.firebaseValue,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }
@@ -110,6 +113,11 @@ class FirebaseService {
     return regex.hasMatch(username) &&
         username.length >= 3 &&
         username.length <= 20;
+  }
+
+  /// Converte string do Firebase para enum UserCategory
+  UserCategory? _parseCategory(String? categoryString) {
+    return ProfileModel.parseCategory(categoryString);
   }
 
   Future<ProfileModel?> getProfileByUsername(String username) async {
@@ -135,9 +143,38 @@ class FirebaseService {
         name: profileData['name'],
         username: profileData['username'],
         password: profileData['password'],
+        category: _parseCategory(profileData['category']),
       );
     } catch (e) {
       return null;
+    }
+  }
+
+  /// 📋 Buscar todos os perfis do Firebase
+  Future<List<ProfileModel>> getAllProfiles() async {
+    try {
+      final querySnapshot = await _firestore.collection('users').get();
+
+      final profiles = <ProfileModel>[];
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        if (data.containsKey('profile')) {
+          final profileData = data['profile'] as Map<String, dynamic>;
+
+          profiles.add(ProfileModel(
+            id: profileData['id'],
+            name: profileData['name'],
+            username: profileData['username'],
+            password: profileData['password'],
+            category: _parseCategory(profileData['category']),
+          ));
+        }
+      }
+
+      return profiles;
+    } catch (e) {
+      return [];
     }
   }
 

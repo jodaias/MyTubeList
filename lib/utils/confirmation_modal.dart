@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
 import 'math_question.dart';
+import '../models/profile_model.dart';
+
+/// Verifica se deve mostrar o desafio matemático baseado na categoria
+bool shouldShowMathChallenge(UserCategory? category) {
+  // Se não tem categoria definida, mostrar o desafio (padrão para crianças)
+  if (category == null) return true;
+  // Usar a propriedade do enum
+  return category.shouldShowMathChallenge;
+}
 
 Future<bool> showMathConfirmationModal(
-    BuildContext context, String title, String textBtn) async {
+    BuildContext context, String title, String textBtn,
+    {UserCategory? userCategory}) async {
+  // Verificar se deve mostrar o desafio matemático
+  if (!shouldShowMathChallenge(userCategory)) {
+    // Se não deve mostrar o desafio, mostrar confirmação simples
+    return await showConfirmationDialog(
+      context,
+      title: title,
+      content: 'Deseja continuar?',
+      confirmText: textBtn,
+    );
+  }
+
+  // Mostrar desafio matemático para crianças
   final question = generateRandomQuestion();
   final answerController = TextEditingController();
   bool isButtonEnabled = false;

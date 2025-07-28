@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/firebase_video_list_provider.dart';
+import '../providers/firebase_profile_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
 
@@ -16,6 +17,7 @@ class VideosPage extends StatefulWidget {
 class _VideosPageState extends State<VideosPage> {
   bool _isSelectionMode = false;
   Set<String> _selectedVideos = {};
+  Set<String> _deletingVideos = {}; // Para controlar loading de cada vídeo
 
   void _toggleSelectionMode() {
     setState(() {
@@ -37,8 +39,12 @@ class _VideosPageState extends State<VideosPage> {
   }
 
   Future<void> _deleteSelectedVideos() async {
+    final firebaseProfileProvider = context.read<FirebaseProfileProvider>();
+    final currentProfile = firebaseProfileProvider.currentProfile;
+
     final confirmed = await showMathConfirmationModal(
-        context, "Excluir ${_selectedVideos.length} vídeo(s)?", "Confirmar");
+        context, "Excluir ${_selectedVideos.length} vídeo(s)?", "Confirmar",
+        userCategory: currentProfile?.category);
     if (confirmed) {
       final firebaseVideoListProvider =
           context.read<FirebaseVideoListProvider>();
@@ -57,7 +63,9 @@ class _VideosPageState extends State<VideosPage> {
   Widget build(BuildContext context) {
     final firebaseVideoListProvider =
         context.watch<FirebaseVideoListProvider>();
+    final firebaseProfileProvider = context.watch<FirebaseProfileProvider>();
     final videoList = firebaseVideoListProvider.getVideoListById(widget.listId);
+    final currentProfile = firebaseProfileProvider.currentProfile;
 
     if (videoList == null) {
       return Scaffold(
@@ -174,6 +182,7 @@ class _VideosPageState extends State<VideosPage> {
                   video: video,
                   showPlayButton: !_isSelectionMode,
                   isSelected: _isSelectionMode ? isSelected : null,
+                  isDeleting: _deletingVideos.contains(video.id),
                   onTap: _isSelectionMode
                       ? () => _toggleVideoSelection(video.id)
                       : () {
@@ -190,13 +199,29 @@ class _VideosPageState extends State<VideosPage> {
                   onDeleteConfirmed: _isSelectionMode
                       ? null
                       : () async {
+                          final firebaseProfileProvider =
+                              context.read<FirebaseProfileProvider>();
+                          final currentProfile =
+                              firebaseProfileProvider.currentProfile;
+
                           final confirmed = await showMathConfirmationModal(
-                              context, "Excluir vídeo?", "Confirmar");
+                              context, "Excluir vídeo?", "Confirmar",
+                              userCategory: currentProfile?.category);
                           if (confirmed) {
-                            await firebaseVideoListProvider.removeVideoFromList(
-                                widget.listId, video.id);
-                            videoList.videos
-                                .removeWhere((v) => v.id == video.id);
+                            setState(() {
+                              _deletingVideos.add(video.id);
+                            });
+
+                            try {
+                              await firebaseVideoListProvider
+                                  .removeVideoFromList(widget.listId, video.id);
+                              videoList.videos
+                                  .removeWhere((v) => v.id == video.id);
+                            } finally {
+                              setState(() {
+                                _deletingVideos.remove(video.id);
+                              });
+                            }
                           }
                         },
                 );

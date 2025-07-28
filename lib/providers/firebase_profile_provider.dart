@@ -84,13 +84,14 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
   /// 👤 Criar novo usuário com senha
   Future<bool> createUserWithPassword(
-      String username, String password, String name) async {
+      String username, String password, String name,
+      {UserCategory? category}) async {
     try {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
 
-      final success = await _firebaseService.createUserWithPassword(
-          username, password, name);
+      final success = await _firebaseService
+          .createUserWithPassword(username, password, name, category: category);
 
       if (success) {
         _isAuthenticated = true;
@@ -113,6 +114,25 @@ class FirebaseProfileProvider extends ChangeNotifier {
       return await _firebaseService.getProfileByUsername(username);
     } catch (e) {
       return null;
+    }
+  }
+
+  /// 🔍 Verificar se username já existe
+  Future<bool> checkUsernameExists(String username) async {
+    try {
+      final profile = await _firebaseService.getProfileByUsername(username);
+      return profile != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 📋 Buscar todos os perfis do Firebase
+  Future<List<ProfileModel>> getAllProfiles() async {
+    try {
+      return await _firebaseService.getAllProfiles();
+    } catch (e) {
+      return [];
     }
   }
 

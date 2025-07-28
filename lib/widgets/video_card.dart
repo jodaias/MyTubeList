@@ -11,6 +11,7 @@ class VideoCard extends StatelessWidget {
   final bool isAdded;
   final bool showPlayButton;
   final bool? isSelected; // Nova propriedade para seleção
+  final bool isDeleting; // Nova propriedade para loading do delete
 
   const VideoCard({
     required this.video,
@@ -18,6 +19,7 @@ class VideoCard extends StatelessWidget {
     this.isAdded = false,
     this.showPlayButton = false,
     this.isSelected, // Nova propriedade
+    this.isDeleting = false, // Nova propriedade para loading do delete
     this.onAddConfirmed = null,
     this.onDeleteConfirmed = null,
     this.onRemoveConfirmed = null,
@@ -133,15 +135,28 @@ class VideoCard extends StatelessWidget {
                           color: Colors.black.withValues(alpha: 0.5),
                           shape: BoxShape.circle,
                         ),
-                        child: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          color: Colors.white,
-                          iconSize: 20,
-                          onPressed: () async {
-                            await onDeleteConfirmed!();
-                          },
-                          splashRadius: 15,
-                        ),
+                        child: isDeleting
+                            ? const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                color: Colors.white,
+                                iconSize: 20,
+                                onPressed: () async {
+                                  await onDeleteConfirmed!();
+                                },
+                                splashRadius: 15,
+                              ),
                       ),
                     ),
                 ],

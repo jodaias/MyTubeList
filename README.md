@@ -1,48 +1,80 @@
+git clone https://github.com/seu-usuario/my_tube_list.git
+
 # 🎬 MyTubeList
 
-<img src="assets/images/mytubelist_logo.png" width="200" alt="English AI Chat Logo">
+<img src="assets/images/mytubelist_logo.png" width="200" alt="MyTubeList Logo">
 
-Aplicativo Flutter para gerenciamento de listas de vídeos do YouTube com suporte a múltiplos perfis.
+Aplicativo Flutter para gerenciamento de listas de vídeos do YouTube, com múltiplos perfis, integração Firebase e suporte local/offline.
 
 ---
 
 ## 🚀 Funcionalidades
 
-✅ Gerenciamento de **perfis de usuário**
-✅ Criação, exclusão e seleção de perfis
-✅ Visualização de vídeos do YouTube em player integrado
-✅ Reprodução fullscreen com lista lateral de vídeos
-✅ Alternância de vídeos em sequência
-✅ Design responsivo com Material Design
-✅ Confirmações modais para ações críticas
+- Gerenciamento de **múltiplos perfis** (local e Firebase)
+- Criação, exclusão, seleção e login de perfis
+- Busca de vídeos do YouTube (com histórico)
+- Adição e remoção em lote de vídeos em listas
+- Player integrado com suporte a fullscreen e lista lateral
+- Alternância rápida entre vídeos
+- Confirmação modal para ações críticas (com desafio matemático para perfis infantis)
+- Suporte a categorias de perfil (faixa etária)
+- Design responsivo (Material Design)
+- Suporte a modo escuro/claro (em breve)
 
 ---
 
 ## 🛠️ Tecnologias utilizadas
 
-- **Flutter**
-- **Provider** – gerenciamento de estado
-- **youtube_player_flutter** – player de vídeos YouTube
-- **Material Design** – UI clean e intuitiva
+- **Flutter** 3.x
+- **Provider** (gerenciamento de estado)
+- **youtube_player_flutter** (player YouTube)
+- **Hive** (armazenamento local)
+- **Firebase Auth** e **Cloud Firestore** (sincronização e autenticação)
+- **Material Design**
 
 ---
 
-## 📁 Estrutura do projeto
+## 📁 Estrutura do projeto (resumida)
 
 lib/
-┣ models/
-┃ ┗ profile_model.dart
-┃ ┗ video_model.dart
-┣ providers/
-┃ ┗ profile_provider.dart
-┃ ┗ video_provider.dart
-┣ utils/
-┃ ┗ confirmation_modal.dart
-┣ pages/
-┃ ┗ profile_page.dart
-┃ ┗ player_page.dart
-┃ ┗ full_screen_player_page.dart
 ┣ main.dart
+┣ firebase_options.dart
+┣ models/
+┃ ┣ profile_model.dart
+┃ ┣ video_model.dart
+┃ ┗ video_list_model.dart
+┣ providers/
+┃ ┣ firebase_profile_provider.dart
+┃ ┣ firebase_video_list_provider.dart
+┃ ┣ firebase_video_provider.dart
+┃ ┗ local_profiles_provider.dart
+┣ pages/
+┃ ┣ auth_page.dart
+┃ ┣ home_page.dart
+┃ ┣ player_page.dart
+┃ ┣ profiles_page.dart
+┃ ┣ search_page.dart
+┃ ┣ splash_page.dart
+┃ ┗ videos_page.dart
+┣ services/
+┃ ┗ firebase_service.dart
+┣ utils/
+┃ ┣ confirmation_modal.dart
+┃ ┣ math_question.dart
+┃ ┗ password_utils.dart
+┣ widgets/
+┃ ┗ video_card.dart
+
+assets/
+┣ images/
+┃ ┣ mytubelist_logo.png
+┃ ┣ mytubelist_logo.svg
+┃ ┣ mytubelist_logo_name.png
+┃ ┗ paused.png
+┣ gifs/
+┃ ┗ playing.gif
+┣ icons/
+┃ ┗ player_green_icon.png
 
 ---
 
@@ -51,44 +83,65 @@ lib/
 1. **Clone o repositório**
 
 ```bash
-
 git clone https://github.com/seu-usuario/my_tube_list.git
 cd my_tube_list
+```
 
-2. Instale as dependências
+2. **Instale as dependências**
 
+```bash
 flutter pub get
+```
 
-3. Execute o projeto
+3. **Configure o Firebase**
 
+- Adicione o arquivo `google-services.json` em `android/app/` (já incluso para debug)
+- O projeto já está pronto para autenticação e Firestore
+
+4. **Execute o projeto**
+
+```bash
 flutter run
+```
 
-🔑 Configurações adicionais
+---
 
-Certifique-se de adicionar seu API key do YouTube se for implementar busca dinâmica de vídeos futuramente.
+## 🔑 Observações e dicas
 
-Atualmente, os vídeos são gerenciados via VideoModel com id, title e thumbnailUrl.
+- Para busca dinâmica de vídeos, configure sua API Key do YouTube (ver `.env` se necessário)
+- Perfis podem ser criados localmente ou importados do Firebase
+- O app funciona offline para perfis locais
+- Suporte a múltiplas listas de vídeos por perfil
 
-✨ Próximos passos
+---
 
-- 🔍 Implementar busca de vídeos direto da API do YouTube
+## ✨ Próximos passos
 
+- 🔍 Busca de vídeos direto da API do YouTube (com API Key)
 - 📥 Suporte a download offline
-
 - 🗂️ Categorias personalizadas por perfil
+- 🌓 Tema escuro/claro automático
 
-- 🌓 Tema escuro e claro automático
+---
 
-🤝 Contribuições
-Contribuições são bem-vindas! Abra um Pull Request ou crie um Issue para discussão de melhorias.
+## 🤝 Contribuições
 
-📄 Licença
+Contribuições são bem-vindas! Abra um Pull Request ou crie um Issue para sugerir melhorias.
+
+---
+
+## 📄 Licença
+
 Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-👤 Autor
+---
+
+## 👤 Autor
+
 Feito com 💚 por Jodaías B. S.
 
-📫 Contact
-feel free to contact me!
-<a href="https://www.linkedin.com/in/jodaias-barreto">Linkedin</a> • <a href="https://github.com/jodaias">Github</a>
+📫 Contato: <a href="https://www.linkedin.com/in/jodaias-barreto">Linkedin</a> • <a href="https://github.com/jodaias">Github</a>
+
+```
+
 ```

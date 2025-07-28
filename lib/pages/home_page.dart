@@ -6,6 +6,7 @@ import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../services/firebase_service.dart';
 import '../models/video_list_model.dart';
+import '../models/profile_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -41,10 +42,14 @@ class _HomePageState extends State<HomePage> {
     Navigator.pushNamedAndRemoveUntil(context, '/auth', (_) => false);
   }
 
-  Future<void> _handleDeleteProfile(BuildContext context, String profileId,
-      FirebaseProfileProvider firebaseProfileProvider) async {
+  Future<void> _handleDeleteProfile(
+      BuildContext context,
+      String profileId,
+      FirebaseProfileProvider firebaseProfileProvider,
+      ProfileModel profile) async {
     final canEnter = await showMathConfirmationModal(
-        context, "Excluir perfil?", "confirmar");
+        context, "Excluir perfil?", "confirmar",
+        userCategory: profile.category);
     if (canEnter) {
       try {
         // Salvar o username antes de deletar do Firebase
@@ -143,14 +148,15 @@ class _HomePageState extends State<HomePage> {
             onSelected: (value) async {
               if (value == 'create_list') {
                 final canEnter = await showMathConfirmationModal(
-                    context, "Acesso a modal: criar lista!", "confirmar");
+                    context, "Acesso a modal: criar lista!", "confirmar",
+                    userCategory: selectedProfile.category);
                 if (canEnter) {
                   _showCreateListDialog(
                       context, firebaseVideoListProvider, selectedProfile.id);
                 }
               } else if (value == 'delete_profile') {
-                await _handleDeleteProfile(
-                    context, selectedProfile.id, firebaseProfileProvider);
+                await _handleDeleteProfile(context, selectedProfile.id,
+                    firebaseProfileProvider, selectedProfile);
               }
             },
             itemBuilder: (context) => [
@@ -286,9 +292,17 @@ class _HomePageState extends State<HomePage> {
                               }
                             },
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'play',
-                                child: Text('Tocar lista'),
+                                enabled: list.videos.isNotEmpty,
+                                child: Text(
+                                  'Tocar lista',
+                                  style: TextStyle(
+                                    color: list.videos.isNotEmpty
+                                        ? null
+                                        : Colors.grey,
+                                  ),
+                                ),
                               ),
                               const PopupMenuItem(
                                 value: 'add',
@@ -320,9 +334,14 @@ class _HomePageState extends State<HomePage> {
               },
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showCreateListDialog(
-              context, firebaseVideoListProvider, selectedProfile.id);
+        onPressed: () async {
+          final canEnter = await showMathConfirmationModal(
+              context, "Acesso a modal: criar lista!", "confirmar",
+              userCategory: selectedProfile.category);
+          if (canEnter) {
+            _showCreateListDialog(
+                context, firebaseVideoListProvider, selectedProfile.id);
+          }
         },
         backgroundColor: Colors.green[700],
         child: const Icon(Icons.add, color: Colors.white),

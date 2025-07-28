@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../models/profile_model.dart';
+import '../utils/confirmation_modal.dart';
 
 class ProfilesPage extends StatefulWidget {
   const ProfilesPage({Key? key}) : super(key: key);
@@ -14,6 +15,9 @@ class ProfilesPage extends StatefulWidget {
 
 class _ProfilesPageState extends State<ProfilesPage>
     with WidgetsBindingObserver {
+  bool _isCheckingFirebaseProfiles = false;
+  List<ProfileModel> _firebaseProfiles = [];
+
   @override
   void initState() {
     super.initState();
@@ -48,14 +52,220 @@ class _ProfilesPageState extends State<ProfilesPage>
     });
   }
 
-  void _addNewProfile(BuildContext context) async {
-    // Função para adicionar um novo perfil manualmente
-    final nameController = TextEditingController();
+  Future<void> _checkFirebaseProfiles() async {
+    if (_isCheckingFirebaseProfiles) return;
+
+    setState(() {
+      _isCheckingFirebaseProfiles = true;
+    });
+
+    try {
+      // Em vez de buscar todos os perfis, mostrar modal de login
+      _showLoginModal(context);
+    } catch (e) {
+      // Silently handle errors
+      _isCheckingFirebaseProfiles = false;
+    } finally {
+      setState(() {
+        _isCheckingFirebaseProfiles = false;
+      });
+    }
+  }
+
+  void _showLoginModal(BuildContext context) {
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
     bool isPasswordVisible = false;
     bool isLoading = false;
 
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Impedir fechar durante loading
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Adicionar Perfil Existente'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Digite suas credenciais para adicionar seu perfil:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: usernameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nome de usuário',
+                  hintText: 'Ex: joao123',
+                ),
+                enabled: !isLoading, // Desabilitar durante loading
+                onChanged: (value) {
+                  // Remover espaços, acentos e converter para minúsculo
+                  String cleanValue = value
+                      .toLowerCase()
+                      .replaceAll(RegExp(r'\s'), '')
+                      .replaceAll(RegExp(r'[áàâãä]'), 'a')
+                      .replaceAll(RegExp(r'[éèêë]'), 'e')
+                      .replaceAll(RegExp(r'[íìîï]'), 'i')
+                      .replaceAll(RegExp(r'[óòôõö]'), 'o')
+                      .replaceAll(RegExp(r'[úùûü]'), 'u')
+                      .replaceAll(RegExp(r'[çÇ]'), 'c')
+                      .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+
+                  if (value != cleanValue) {
+                    usernameController.value = TextEditingValue(
+                      text: cleanValue,
+                      selection:
+                          TextSelection.collapsed(offset: cleanValue.length),
+                    );
+                  }
+                  setState(() {}); // Reagir às mudanças
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: passwordController,
+                decoration: InputDecoration(
+                  labelText: 'Senha',
+                  hintText: 'Digite sua senha',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: Colors.grey[600],
+                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              isPasswordVisible = !isPasswordVisible;
+                            });
+                          },
+                  ),
+                ),
+                obscureText: !isPasswordVisible,
+                enabled: !isLoading, // Desabilitar durante loading
+                onChanged: (value) {
+                  setState(() {}); // Reagir às mudanças
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: (usernameController.text.isNotEmpty &&
+                      usernameController.text.length >= 3 &&
+                      usernameController.text.length <= 20 &&
+                      passwordController.text.isNotEmpty &&
+                      passwordController.text.length >= 6 &&
+                      passwordController.text.length <= 25 &&
+                      !isLoading)
+                  ? () async {
+                      setState(() {
+                        isLoading = true;
+                      });
+
+                      try {
+                        final firebaseProfileProvider =
+                            context.read<FirebaseProfileProvider>();
+                        final localProfilesProvider =
+                            context.read<LocalProfilesProvider>();
+
+                        // Tentar fazer login
+                        final success =
+                            await firebaseProfileProvider.signInWithUsername(
+                          usernameController.text.trim(),
+                          passwordController.text.trim(),
+                        );
+
+                        if (success) {
+                          // Buscar perfil do Firebase
+                          final profile = await firebaseProfileProvider
+                              .getProfileByUsername(
+                            usernameController.text.trim(),
+                          );
+
+                          if (profile != null) {
+                            // Adicionar ao provider local
+                            await localProfilesProvider.addProfile(profile);
+
+                            // Só fechar o modal após tudo estar pronto
+                            Navigator.pop(context);
+
+                            // Mostrar sucesso
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Perfil adicionado com sucesso!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            throw Exception('Perfil não encontrado');
+                          }
+                        } else {
+                          throw Exception('Credenciais inválidas');
+                        }
+                      } catch (e) {
+                        setState(() {
+                          isLoading = false;
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  : null,
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text('Adicionar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _loginWithExistingProfile(ProfileModel profile) async {
+    Navigator.pushNamed(context, '/auth', arguments: {
+      'profile': profile,
+      'usernameReadOnly': true,
+    });
+  }
+
+  void _addExistingProfile(ProfileModel profile) async {
+    final localProfilesProvider = context.read<LocalProfilesProvider>();
+    await localProfilesProvider.addProfile(profile);
+    setState(() {});
+  }
+
+  void _addNewProfile(BuildContext context) async {
+    final nameController = TextEditingController();
+    final usernameController = TextEditingController();
+    final passwordController = TextEditingController();
+    UserCategory? selectedCategory = UserCategory.adult; // Categoria padrão
+    bool isPasswordVisible = false;
+    bool isLoading = false;
+    bool isCheckingUsername = false;
+    String? usernameError;
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<Map<String, dynamic>>(
@@ -75,7 +285,22 @@ class _ProfilesPageState extends State<ProfilesPage>
                     hintText: 'Ex: João',
                   ),
                   autofocus: true,
-                  onChanged: (value) => setState(() {}), // Reagir às mudanças
+                  onChanged: (value) {
+                    // Permitir apenas letras, espaços e apóstrofos
+                    String cleanValue = value
+                        .replaceAll(RegExp(r'[0-9]'), '')
+                        .replaceAll(RegExp(r"[^\p{L}\s']", unicode: true), '')
+                        .replaceAll(RegExp(r'\s+'), ' ')
+                        .trim();
+                    if (value != cleanValue) {
+                      nameController.value = TextEditingValue(
+                        text: cleanValue,
+                        selection:
+                            TextSelection.collapsed(offset: cleanValue.length),
+                      );
+                    }
+                    setState(() {});
+                  },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Digite um nome para o perfil';
@@ -88,29 +313,36 @@ class _ProfilesPageState extends State<ProfilesPage>
                     }
                     return null;
                   },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: usernameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Nome de usuário',
                     hintText: 'Ex: joao123',
+                    suffixIcon: isCheckingUsername
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : null,
                   ),
-                  onChanged: (value) {
-                    // Remover espaços, acentos e converter para minúsculo
+                  onChanged: (value) async {
                     String cleanValue = value
-                        .toLowerCase() // Converter para minúsculo
-                        .replaceAll(RegExp(r'\s'), '') // Remove espaços
+                        .toLowerCase()
+                        .replaceAll(RegExp(r'\s'), '')
                         .replaceAll(RegExp(r'[áàâãä]'), 'a')
                         .replaceAll(RegExp(r'[éèêë]'), 'e')
                         .replaceAll(RegExp(r'[íìîï]'), 'i')
                         .replaceAll(RegExp(r'[óòôõö]'), 'o')
                         .replaceAll(RegExp(r'[úùûü]'), 'u')
-                        .replaceAll(
-                            RegExp(r'[çÇ]'), 'c') // Converter ç e Ç para c
-                        .replaceAll(RegExp(r'[^a-z0-9_]'),
-                            ''); // Apenas letras, números e underscore
-
+                        .replaceAll(RegExp(r'[çÇ]'), 'c')
+                        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
                     if (value != cleanValue) {
                       usernameController.value = TextEditingValue(
                         text: cleanValue,
@@ -118,7 +350,35 @@ class _ProfilesPageState extends State<ProfilesPage>
                             TextSelection.collapsed(offset: cleanValue.length),
                       );
                     }
-                    setState(() {}); // Reagir às mudanças
+                    if (cleanValue.length >= 4) {
+                      setState(() {
+                        isCheckingUsername = true;
+                        usernameError = null;
+                      });
+                      try {
+                        final firebaseProfileProvider =
+                            context.read<FirebaseProfileProvider>();
+                        final exists = await firebaseProfileProvider
+                            .checkUsernameExists(cleanValue);
+                        setState(() {
+                          isCheckingUsername = false;
+                          if (exists) {
+                            usernameError = 'Nome de usuário já está em uso';
+                          } else {
+                            usernameError = null;
+                          }
+                        });
+                      } catch (e) {
+                        setState(() {
+                          isCheckingUsername = false;
+                        });
+                      }
+                    } else {
+                      setState(() {
+                        isCheckingUsername = false;
+                        usernameError = null;
+                      });
+                    }
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -130,8 +390,12 @@ class _ProfilesPageState extends State<ProfilesPage>
                     if (value.length > 20) {
                       return 'O nome de usuário deve ter no máximo 20 caracteres';
                     }
+                    if (usernameError != null) {
+                      return usernameError;
+                    }
                     return null;
                   },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -155,15 +419,13 @@ class _ProfilesPageState extends State<ProfilesPage>
                   ),
                   obscureText: !isPasswordVisible,
                   onChanged: (value) {
-                    // Remover espaços e acentos da senha
                     String cleanValue = value
-                        .replaceAll(RegExp(r'\s'), '') // Remove espaços
+                        .replaceAll(RegExp(r'\s'), '')
                         .replaceAll(RegExp(r'[áàâãä]'), 'a')
                         .replaceAll(RegExp(r'[éèêë]'), 'e')
                         .replaceAll(RegExp(r'[íìîï]'), 'i')
                         .replaceAll(RegExp(r'[óòôõö]'), 'o')
                         .replaceAll(RegExp(r'[úùûü]'), 'u');
-
                     if (value != cleanValue) {
                       passwordController.value = TextEditingValue(
                         text: cleanValue,
@@ -171,7 +433,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                             TextSelection.collapsed(offset: cleanValue.length),
                       );
                     }
-                    setState(() {}); // Reagir às mudanças
+                    setState(() {});
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -185,6 +447,35 @@ class _ProfilesPageState extends State<ProfilesPage>
                     }
                     return null;
                   },
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<UserCategory>(
+                  decoration: const InputDecoration(
+                    labelText: 'Categoria',
+                    hintText: 'Selecione a categoria do perfil',
+                  ),
+                  value: selectedCategory,
+                  items: UserCategory.values
+                      .map((category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category.displayName),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        selectedCategory = value;
+                      });
+                    }
+                  },
+                  validator: (value) {
+                    if (value == null) {
+                      return 'Selecione uma categoria';
+                    }
+                    return null;
+                  },
+                  autovalidateMode: AutovalidateMode.disabled,
                 ),
               ],
             ),
@@ -204,50 +495,43 @@ class _ProfilesPageState extends State<ProfilesPage>
                       usernameController.text.length <= 20 &&
                       passwordController.text.length >= 6 &&
                       passwordController.text.length <= 25 &&
+                      selectedCategory != null &&
+                      usernameError == null &&
                       !isLoading)
                   ? () async {
                       if (formKey.currentState!.validate()) {
                         setState(() {
                           isLoading = true;
                         });
-
                         try {
                           final firebaseProfileProvider =
                               context.read<FirebaseProfileProvider>();
                           final localProfilesProvider =
                               context.read<LocalProfilesProvider>();
-
-                          // Criar usuário no Firebase Auth
                           final success = await firebaseProfileProvider
                               .createUserWithPassword(
                             usernameController.text.trim(),
                             passwordController.text.trim(),
                             nameController.text.trim(),
+                            category: selectedCategory,
                           );
-
                           if (!success) {
                             throw Exception(
                                 'Falha ao criar usuário no Firebase');
                           }
-
-                          // Criar perfil local
                           final profile = ProfileModel(
                             id: usernameController.text.trim(),
                             name: nameController.text.trim(),
                             username: usernameController.text.trim(),
                             password: null,
+                            category: selectedCategory,
                           );
-
-                          // Adicionar ao provider local
                           await localProfilesProvider.addProfile(profile);
-
                           Navigator.pop(context, {'success': true});
                         } catch (e) {
                           setState(() {
                             isLoading = false;
                           });
-
-                          // Mostrar erro no modal
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text('Erro ao adicionar perfil: $e')),
@@ -273,10 +557,8 @@ class _ProfilesPageState extends State<ProfilesPage>
     );
 
     if (result != null && result['success'] == true) {
-      // Recarregar lista de perfis após adicionar
       final localProfilesProvider = context.read<LocalProfilesProvider>();
       await localProfilesProvider.loadProfiles();
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil adicionado com sucesso!')),
       );
@@ -303,6 +585,22 @@ class _ProfilesPageState extends State<ProfilesPage>
         ),
         backgroundColor: Colors.green[800],
         actions: [
+          // Botão para adicionar perfil existente do Firebase
+          IconButton(
+            onPressed:
+                _isCheckingFirebaseProfiles ? null : _checkFirebaseProfiles,
+            icon: _isCheckingFirebaseProfiles
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(Icons.person_search, color: Colors.white),
+            tooltip: 'Adicionar perfil existente',
+          ),
           // Botão para adicionar novo perfil
           IconButton(
             onPressed: () => _addNewProfile(context),
@@ -327,7 +625,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                         ),
                       )
                     : localProfilesProvider.profiles.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -338,7 +636,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                                 ),
                                 SizedBox(height: 16),
                                 Text(
-                                  'Nenhum perfil encontrado',
+                                  'Nenhum perfil local encontrado',
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: Colors.grey,
@@ -346,96 +644,229 @@ class _ProfilesPageState extends State<ProfilesPage>
                                 ),
                                 SizedBox(height: 8),
                                 Text(
-                                  'Clique no botão + para adicionar\num novo perfil',
+                                  'Você pode criar um novo perfil ou\nverificar perfis existentes no Firebase',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
+                                SizedBox(height: 24),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: _isCheckingFirebaseProfiles
+                                          ? null
+                                          : _checkFirebaseProfiles,
+                                      icon: _isCheckingFirebaseProfiles
+                                          ? SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2),
+                                            )
+                                          : Icon(Icons.search),
+                                      label: Text(_isCheckingFirebaseProfiles
+                                          ? 'Verificando...'
+                                          : 'Verificar Firebase'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue[600],
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _addNewProfile(context),
+                                      icon: Icon(Icons.person_add),
+                                      label: Text('Novo Perfil'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green[600],
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (_firebaseProfiles.isNotEmpty) ...[
+                                  SizedBox(height: 24),
+                                  Text(
+                                    'Perfis encontrados no Firebase:',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  SizedBox(height: 16),
+                                  ...(_firebaseProfiles
+                                      .map((profile) => Card(
+                                            margin: EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 4),
+                                            child: ListTile(
+                                              leading: Icon(Icons.person,
+                                                  color: Colors.blue[600]),
+                                              title: Text(profile.name),
+                                              subtitle:
+                                                  Text('@${profile.username}'),
+                                              trailing: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  IconButton(
+                                                    icon: Icon(Icons.login,
+                                                        color:
+                                                            Colors.blue[600]),
+                                                    onPressed: () =>
+                                                        _loginWithExistingProfile(
+                                                            profile),
+                                                    tooltip: 'Fazer login',
+                                                  ),
+                                                  IconButton(
+                                                    icon: Icon(Icons.add,
+                                                        color:
+                                                            Colors.green[600]),
+                                                    onPressed: () =>
+                                                        _addExistingProfile(
+                                                            profile),
+                                                    tooltip:
+                                                        'Adicionar localmente',
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ))
+                                      .toList()),
+                                ],
                               ],
                             ),
                           )
-                        : GridView.builder(
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.9,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                            itemCount: localProfilesProvider.profiles.length,
-                            itemBuilder: (context, index) {
-                              final profile =
-                                  localProfilesProvider.profiles[index];
-
-                              return Card(
-                                elevation: 4,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: InkWell(
-                                  onTap: () => _selectProfile(context, profile),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Colors.white,
-                                          Colors.grey[50]!
-                                        ],
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.person,
-                                            size: 48,
-                                            color: Colors.green[700],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            profile.name,
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.black87,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            '@${profile.username}',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Clique para acessar',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                        : Column(
+                            children: [
+                              // Seção de perfis locais
+                              Expanded(
+                                child: GridView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.9,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
                                   ),
+                                  itemCount:
+                                      localProfilesProvider.profiles.length,
+                                  itemBuilder: (context, index) {
+                                    final profile =
+                                        localProfilesProvider.profiles[index];
+
+                                    return Card(
+                                      elevation: 4,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          InkWell(
+                                            onTap: () => _selectProfile(
+                                                context, profile),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.person,
+                                                      size: 48,
+                                                      color: Colors.green[700],
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                    Text(
+                                                      profile.name,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black87,
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      '@${profile.username}',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Clique para acessar',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          // Botão de menu para cada perfil
+                                          Positioned(
+                                            top: 8,
+                                            right: 8,
+                                            child: PopupMenuButton<String>(
+                                              icon: const Icon(
+                                                Icons.more_vert,
+                                                color: Colors.grey,
+                                                size: 20,
+                                              ),
+                                              onSelected: (value) async {
+                                                if (value == 'remove_local') {
+                                                  final confirmed =
+                                                      await showMathConfirmationModal(
+                                                    context,
+                                                    "Remover perfil local?",
+                                                    "Remover",
+                                                    userCategory:
+                                                        profile.category,
+                                                  );
+                                                  if (confirmed) {
+                                                    await localProfilesProvider
+                                                        .removeProfile(
+                                                            profile.id);
+                                                    setState(() {});
+                                                  }
+                                                }
+                                              },
+                                              itemBuilder: (context) => [
+                                                const PopupMenuItem(
+                                                  value: 'remove_local',
+                                                  child:
+                                                      Text('🗑️ Remover local'),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
               ),
             ),

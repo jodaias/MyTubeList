@@ -123,6 +123,27 @@ class FirebaseVideoListProvider extends ChangeNotifier {
     }
   }
 
+  /// ➕ Adicionar vários vídeos à lista (batch)
+  Future<bool> addVideosToList(String listId, List<VideoModel> videos) async {
+    try {
+      final videoList = _videoLists.firstWhere((list) => list.id == listId);
+      final updatedVideos = List<VideoModel>.from(videoList.videos);
+
+      // Adiciona apenas vídeos que ainda não estão na lista
+      for (final video in videos) {
+        if (!updatedVideos.any((v) => v.id == video.id)) {
+          updatedVideos.add(video);
+        }
+      }
+
+      final updatedVideoList = videoList.copyWith(videos: updatedVideos);
+      return await updateVideoList(updatedVideoList);
+    } catch (e) {
+      // Silently handle batch add errors
+      return false;
+    }
+  }
+
   /// ➖ Remover vídeo da lista
   Future<bool> removeVideoFromList(String listId, String videoId) async {
     try {

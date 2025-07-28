@@ -130,20 +130,22 @@ class _SearchPageState extends State<SearchPage> {
       final selectedVideos =
           _searchResults.where((v) => _selectedVideos.contains(v.id)).toList();
 
-      for (final video in selectedVideos) {
-        await firebaseVideoListProvider.addVideoToList(widget.listId, video);
-      }
+      final success = await firebaseVideoListProvider.addVideosToList(
+          widget.listId, selectedVideos);
 
       setState(() {
-        // Manter seleções e atualizar auto-seleções com os vídeos adicionados
-        _autoSelectedVideos.addAll(_selectedVideos);
+        if (success) {
+          // Manter seleções e atualizar auto-seleções com os vídeos adicionados
+          _autoSelectedVideos.addAll(_selectedVideos);
+        }
         _isSaving = false;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                '${selectedVideos.length} vídeo(s) adicionado(s) à lista!')),
+            content: Text(success
+                ? '${selectedVideos.length} vídeo(s) adicionado(s) à lista!'
+                : 'Erro ao adicionar vídeos.')),
       );
     } catch (e) {
       setState(() {

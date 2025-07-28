@@ -42,6 +42,8 @@ class LocalProfilesProvider extends ChangeNotifier {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
 
+      if (_box.containsKey(profile.id)) return;
+
       // Adicionar perfil usando ID como chave
       await _box.put(profile.id, profile);
 
@@ -57,6 +59,8 @@ class LocalProfilesProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+
+      if (!_box.containsKey(profileId)) return;
 
       // Deletar perfil usando ID como chave
       await _box.delete(profileId);

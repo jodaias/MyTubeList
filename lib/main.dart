@@ -47,6 +47,7 @@ void main() async {
   Hive.registerAdapter(VideoModelAdapter());
   Hive.registerAdapter(ProfileModelAdapter());
   Hive.registerAdapter(VideoListModelAdapter());
+  Hive.registerAdapter(UserCategoryAdapter());
 
   final firebaseProfileProvider = FirebaseProfileProvider();
   final firebaseVideoListProvider = FirebaseVideoListProvider();

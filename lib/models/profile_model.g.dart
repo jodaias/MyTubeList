@@ -20,6 +20,7 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
       id: fields[0] as String,
       name: fields[1] as String,
       username: fields[6] as String,
+      category: fields[7] as UserCategory?,
       videoLists: (fields[2] as List).cast<VideoListModel>(),
       password: fields[3] as String?,
       securityQuestion: fields[4] as String?,
@@ -30,7 +31,7 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
   @override
   void write(BinaryWriter writer, ProfileModel obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
       ..writeByte(4)
       ..write(obj.securityQuestion)
       ..writeByte(5)
-      ..write(obj.securityAnswer);
+      ..write(obj.securityAnswer)
+      ..writeByte(7)
+      ..write(obj.category);
   }
 
   @override
@@ -54,6 +57,70 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProfileModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class UserCategoryAdapter extends TypeAdapter<UserCategory> {
+  @override
+  final int typeId = 3;
+
+  @override
+  UserCategory read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return UserCategory.toddler;
+      case 1:
+        return UserCategory.child;
+      case 2:
+        return UserCategory.preteen;
+      case 3:
+        return UserCategory.youngAdult;
+      case 4:
+        return UserCategory.adult;
+      case 5:
+        return UserCategory.middleAge;
+      case 6:
+        return UserCategory.senior;
+      default:
+        return UserCategory.toddler;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, UserCategory obj) {
+    switch (obj) {
+      case UserCategory.toddler:
+        writer.writeByte(0);
+        break;
+      case UserCategory.child:
+        writer.writeByte(1);
+        break;
+      case UserCategory.preteen:
+        writer.writeByte(2);
+        break;
+      case UserCategory.youngAdult:
+        writer.writeByte(3);
+        break;
+      case UserCategory.adult:
+        writer.writeByte(4);
+        break;
+      case UserCategory.middleAge:
+        writer.writeByte(5);
+        break;
+      case UserCategory.senior:
+        writer.writeByte(6);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserCategoryAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
