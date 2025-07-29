@@ -25,13 +25,14 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
       password: fields[3] as String?,
       securityQuestion: fields[4] as String?,
       securityAnswer: fields[5] as String?,
+      email: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProfileModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class ProfileModelAdapter extends TypeAdapter<ProfileModel> {
       ..writeByte(5)
       ..write(obj.securityAnswer)
       ..writeByte(7)
-      ..write(obj.category);
+      ..write(obj.category)
+      ..writeByte(8)
+      ..write(obj.email);
   }
 
   @override

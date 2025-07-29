@@ -18,15 +18,18 @@ class FirebaseService {
   // 🔐 Autenticação usando apenas Firebase Auth (SEM armazenar senhas no Firestore)
   Future<bool> signInWithUsername(String username, String password) async {
     try {
-      // Buscar perfil no Firestore para verificar se o usuário existe
+      // Buscar perfil no Firestore para obter o email real
       final profile = await getProfileByUsername(username);
       if (profile == null) {
         return false;
       }
 
-      // Tentar fazer login no Firebase Auth usando email temporário
+      // Usar o email real salvo no Firestore, ou fallback para o formato antigo
+      final email = profile.email ?? '$username@mytubelist.com';
+
+      // Tentar fazer login no Firebase Auth usando email real
       final userCredential = await _auth.signInWithEmailAndPassword(
-        email: '$username@mytubelist.com',
+        email: email,
         password: password,
       );
 
@@ -76,6 +79,7 @@ class FirebaseService {
         name: name,
         username: username,
         category: category,
+        email: '$username@mytubelist.com', // Email padrão inicial
       );
 
       await _usersCollection.doc(userCredential.user!.uid).set({
@@ -84,6 +88,7 @@ class FirebaseService {
           'name': profile.name,
           'username': username,
           'category': category?.firebaseValue,
+          'email': profile.email, // Salvar email no Firestore
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }
@@ -131,6 +136,7 @@ class FirebaseService {
         name: profileData['name'],
         username: profileData['username'],
         category: _parseCategory(profileData['category']),
+        email: profileData['email'],
       );
     } catch (e) {
       return null;
@@ -154,6 +160,7 @@ class FirebaseService {
             name: profileData['name'],
             username: profileData['username'],
             category: _parseCategory(profileData['category']),
+            email: profileData['email'],
           ));
         }
       }
@@ -226,6 +233,8 @@ class FirebaseService {
         id: profileData['id'],
         name: profileData['name'],
         username: profileData['username'],
+        category: _parseCategory(profileData['category']),
+        email: profileData['email'],
       );
     } catch (e) {
       return null;
@@ -428,5 +437,70 @@ class FirebaseService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// 📧 Atualizar email do usuário
+  Future<bool> updateEmail(String newEmail) async {
+    try {
+      final user = currentUser;
+      if (user == null) return false;
+
+      // Verificar se o email é válido
+      if (!_isValidEmail(newEmail)) {
+        return false;
+      }
+
+      // Atualizar email no Firebase Auth
+      await user.verifyBeforeUpdateEmail(newEmail);
+
+      // Atualizar perfil no Firestore com o novo email
+      await _usersCollection.doc(user.uid).update({
+        'profile.email': newEmail,
+        'profile.updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 🔐 Alterar senha do usuário
+  Future<bool> changePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      final user = currentUser;
+      if (user == null) return false;
+
+      // Reautenticar o usuário antes de alterar a senha
+      final credential = auth.EmailAuthProvider.credential(
+        email: user.email ?? '',
+        password: currentPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      // Alterar a senha
+      await user.updatePassword(newPassword);
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 📧 Enviar email de recuperação de senha
+  Future<bool> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Validar formato de email
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 }

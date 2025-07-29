@@ -26,6 +26,8 @@ import 'pages/player_page.dart';
 import 'pages/profiles_page.dart';
 import 'pages/search_page.dart';
 import 'pages/auth_page.dart';
+import 'pages/settings_page.dart';
+import 'pages/password_reset_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,6 +138,8 @@ class MyApp extends StatelessWidget {
             listId: listId,
           );
         },
+        '/settings': (_) => const SettingsPage(),
+        '/password-reset': (_) => const PasswordResetPage(),
       },
     );
   }

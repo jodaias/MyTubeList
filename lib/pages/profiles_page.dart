@@ -80,7 +80,7 @@ class _ProfilesPageState extends State<ProfilesPage>
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Impedir fechar durante loading
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Adicionar Perfil Existente'),
@@ -270,6 +270,7 @@ class _ProfilesPageState extends State<ProfilesPage>
     final formKey = GlobalKey<FormState>();
 
     final result = await showDialog<Map<String, dynamic>>(
+      barrierDismissible: false,
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(

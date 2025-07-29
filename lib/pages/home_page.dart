@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
-import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../models/video_list_model.dart';
 import '../models/profile_model.dart';
@@ -52,60 +51,6 @@ class _HomePageState extends State<HomePage> {
     final firebaseProfileProvider = context.read<FirebaseProfileProvider>();
     await firebaseProfileProvider.signOut();
     Navigator.pushNamedAndRemoveUntil(context, '/auth', (_) => false);
-  }
-
-  Future<void> _handleDeleteProfile(
-      BuildContext context,
-      String profileId,
-      FirebaseProfileProvider firebaseProfileProvider,
-      ProfileModel profile) async {
-    // Sempre exibe confirmação simples antes do desafio
-    final confirm = await showConfirmationDialog(
-      context,
-      title: 'Excluir perfil',
-      content:
-          'Tem certeza que deseja excluir este perfil? Esta ação não poderá ser desfeita.',
-      confirmText: 'Excluir',
-      cancelText: 'Cancelar',
-    );
-    if (!confirm) return;
-    // Se for criança, faz o desafio matemático
-    final canAccess = await showMathConfirmationModal(
-        context, "Confirmação extra", "excluir",
-        userCategory: profile.category);
-    if (!canAccess) return;
-    try {
-      // Salvar o username antes de deletar do Firebase
-      final usernameToDelete = firebaseProfileProvider.currentProfile?.username;
-
-      // Deletar do Firebase
-      await firebaseProfileProvider.deleteCurrentUser();
-
-      // Deletar do Hive (armazenamento local)
-      final localProfilesProvider = context.read<LocalProfilesProvider>();
-
-      if (usernameToDelete != null) {
-        final localProfile =
-            localProfilesProvider.getProfileByUsername(usernameToDelete);
-
-        if (localProfile != null) {
-          await localProfilesProvider.removeProfile(localProfile.id);
-        } else {
-          // Fallback: tentar deletar pelo username
-          await localProfilesProvider.removeProfile(usernameToDelete);
-        }
-      }
-
-      // Recarregar lista de perfis locais
-      await localProfilesProvider.loadProfiles();
-
-      // Redirecionar para página de auth
-      Navigator.pushNamedAndRemoveUntil(context, '/auth', (r) => false);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao deletar perfil: $e')),
-      );
-    }
   }
 
   @override
@@ -202,9 +147,16 @@ class _HomePageState extends State<HomePage> {
 
                   _showCreateListDialog(
                       context, firebaseVideoListProvider, selectedProfile.id);
-                } else if (value == 'delete_profile') {
-                  await _handleDeleteProfile(context, selectedProfile.id,
-                      firebaseProfileProvider, selectedProfile);
+                } else if (value == 'settings') {
+                  final canAccess = await showMathConfirmationModal(
+                    context,
+                    'Acesso restrito',
+                    'Acessar as configurações',
+                    userCategory: selectedProfile.category,
+                  );
+                  if (!canAccess) return;
+
+                  Navigator.pushNamed(context, '/settings');
                 }
               },
               itemBuilder: (context) => [
@@ -213,8 +165,8 @@ class _HomePageState extends State<HomePage> {
                   child: Text('➕ Criar Lista'),
                 ),
                 const PopupMenuItem(
-                  value: 'delete_profile',
-                  child: Text('🗑️ Deletar Perfil'),
+                  value: 'settings',
+                  child: Text('⚙️ Configurações'),
                 ),
               ],
             ),
@@ -499,6 +451,7 @@ class _HomePageState extends State<HomePage> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: const Text('Renomear Lista'),

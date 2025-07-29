@@ -70,6 +70,9 @@ class ProfileModel extends HiveObject {
   @HiveField(7)
   final UserCategory? category; // 🆕 categoria do usuário
 
+  @HiveField(8)
+  final String? email; // 🆕 email para recuperação de senha
+
   ProfileModel({
     required this.id,
     required this.name,
@@ -79,6 +82,7 @@ class ProfileModel extends HiveObject {
     this.password, // Apenas para armazenamento local
     this.securityQuestion,
     this.securityAnswer,
+    this.email,
   });
 
   ProfileModel copyWith({

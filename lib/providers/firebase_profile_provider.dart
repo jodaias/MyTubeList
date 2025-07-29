@@ -202,4 +202,62 @@ class FirebaseProfileProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// 📧 Atualizar email para recuperação de senha
+  Future<bool> updateEmail(String newEmail) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final success = await _firebaseService.updateEmail(newEmail);
+
+      if (success) {
+        // Recarregar perfil após atualização
+        await reloadProfile();
+      }
+
+      return success;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 🔐 Alterar senha
+  Future<bool> changePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final success =
+          await _firebaseService.changePassword(currentPassword, newPassword);
+
+      return success;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 📧 Enviar email de recuperação de senha
+  Future<bool> sendPasswordResetEmail(String email) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final success = await _firebaseService.sendPasswordResetEmail(email);
+
+      return success;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

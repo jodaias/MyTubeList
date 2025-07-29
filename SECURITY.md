@@ -74,36 +74,13 @@ O MyTubeList implementa uma arquitetura de segurança robusta que **NÃO armazen
 - Atualizações automáticas de segurança
 - Recuperação de senha integrada
 
-## 🔧 Implementação Técnica
-
-### Serviço Firebase (`firebase_service.dart`)
-
-```dart
-// ❌ ANTES: Verificava senha no Firestore
-final profile = await getProfileByUsername(username);
-final passwordValid = PasswordUtils.verifyPassword(password, profile.password!);
-
-// ✅ AGORA: Usa apenas Firebase Auth
-final userCredential = await _auth.signInWithEmailAndPassword(
-  email: '$username@mytubelist.com',
-  password: password,
-);
-```
-
-### Modelo de Perfil (`profile_model.dart`)
-
-```dart
-// ❌ ANTES: Senha era sincronizada
-final String? password; // Sincronizado com Firebase
-
-// ✅ AGORA: Senha apenas local (opcional)
-final String? password; // Apenas para armazenamento local
-```
-
 ## 🚀 Próximos Passos
 
 ### Melhorias de Segurança
 
+- [x] ✅ **Implementado**: Sistema de recuperação de senha via email
+- [x] ✅ **Implementado**: Alteração de senha nas configurações
+- [x] ✅ **Implementado**: Atualização de email para recuperação
 - [ ] Implementar autenticação biométrica
 - [ ] Adicionar autenticação de dois fatores
 - [ ] Implementar logout automático por inatividade
@@ -111,10 +88,83 @@ final String? password; // Apenas para armazenamento local
 
 ### Recursos de Usuário
 
-- [ ] Recuperação de senha via email
-- [ ] Alteração de senha
+- [x] ✅ **Implementado**: Recuperação de senha via email
+- [x] ✅ **Implementado**: Alteração de senha
+- [x] ✅ **Implementado**: Atualização de email
 - [ ] Verificação de força da senha
 - [ ] Histórico de sessões
+
+## 🔄 Fluxo de Recuperação de Senha
+
+### 1. **Solicitar Recuperação**
+
+```
+Usuário → Configurações → "Enviar Email de Recuperação"
+↓
+Firebase Auth → sendPasswordResetEmail(email)
+↓
+Email enviado com link de recuperação
+```
+
+### 2. **Processo de Recuperação**
+
+```
+Usuário clica no link do email
+↓
+App abre página de reset (/password-reset)
+↓
+Usuário define nova senha
+↓
+Firebase Auth → updatePassword(newPassword)
+↓
+Redirecionamento para home
+```
+
+### 3. **Alteração de Senha**
+
+```
+Usuário → Configurações → "Alterar Senha"
+↓
+Reautenticação com senha atual
+↓
+Firebase Auth → updatePassword(newPassword)
+↓
+Confirmação de sucesso
+```
+
+## 🔧 Implementação Técnica
+
+### Página de Configurações (`settings_page.dart`)
+
+```dart
+// ✅ Funcionalidades implementadas:
+- Atualizar email para recuperação
+- Alterar senha atual
+- Enviar email de recuperação
+- Deletar perfil (com confirmação e desafio matemático)
+- Validação de campos
+- Feedback visual de sucesso/erro
+```
+
+### Página de Reset (`password_reset_page.dart`)
+
+```dart
+// ✅ Funcionalidades implementadas:
+- Verificação de link válido
+- Formulário de nova senha
+- Validação de senha
+- Redirecionamento automático
+```
+
+### Serviço Firebase (`firebase_service.dart`)
+
+```dart
+// ✅ Novos métodos:
+- updateEmail(newEmail)
+- changePassword(currentPassword, newPassword)
+- sendPasswordResetEmail(email)
+- _isValidEmail(email)
+```
 
 ## 📚 Referências
 
