@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart' as auth;
 import '../models/profile_model.dart';
 import '../models/video_list_model.dart';
 import '../models/video_model.dart';
-import '../utils/password_utils.dart';
 
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -16,38 +15,22 @@ class FirebaseService {
   CollectionReference _userSearchHistoryCollection(String userId) =>
       _usersCollection.doc(userId).collection('searchHistory');
 
-  // 🔐 Autenticação simples (local + Firebase)
+  // 🔐 Autenticação usando apenas Firebase Auth (SEM armazenar senhas no Firestore)
   Future<bool> signInWithUsername(String username, String password) async {
     try {
-      // Buscar perfil no Firestore
+      // Buscar perfil no Firestore para verificar se o usuário existe
       final profile = await getProfileByUsername(username);
       if (profile == null) {
         return false;
       }
 
-      // Verificar senha com hash
-      if (profile.password == null) {
-        return false;
-      }
-
-      final passwordValid =
-          PasswordUtils.verifyPassword(password, profile.password!);
-
-      if (!passwordValid) {
-        return false;
-      }
-
-      // Fazer login no Firebase Auth
+      // Tentar fazer login no Firebase Auth usando email temporário
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: '$username@mytubelist.com',
         password: password,
       );
 
-      if (userCredential.user == null) {
-        return false;
-      }
-
-      return true;
+      return userCredential.user != null;
     } catch (e) {
       return false;
     }
@@ -63,10 +46,18 @@ class FirebaseService {
             'Nome de usuário inválido. Use apenas letras, números e underscore.');
       }
 
-      // Verificar se usuário já existe
-      final existingProfile = await getProfileByUsername(username);
-      if (existingProfile != null) {
+      // Verificar se usuário já existe no Firebase Auth
+      try {
+        await _auth.signInWithEmailAndPassword(
+          email: '$username@mytubelist.com',
+          password: password,
+        );
+        // Se conseguiu fazer login, o usuário já existe
+        await _auth.signOut();
         throw Exception('Nome de usuário já existe.');
+      } catch (e) {
+        // Se não conseguiu fazer login, pode ser que o usuário não exista
+        // ou a senha esteja errada (o que é esperado para novo usuário)
       }
 
       // Criar usuário no Firebase Auth
@@ -79,13 +70,11 @@ class FirebaseService {
         return false;
       }
 
-      // Criar perfil com senha hasheada
-      final hashedPassword = PasswordUtils.hashPassword(password);
+      // Criar perfil NO Firestore SEM a senha
       final profile = ProfileModel(
         id: username, // Usar username como ID para consistência
         name: name,
         username: username,
-        password: hashedPassword,
         category: category,
       );
 
@@ -94,7 +83,6 @@ class FirebaseService {
           'id': profile.id,
           'name': profile.name,
           'username': username,
-          'password': hashedPassword,
           'category': category?.firebaseValue,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
@@ -142,7 +130,6 @@ class FirebaseService {
         id: profileData['id'],
         name: profileData['name'],
         username: profileData['username'],
-        password: profileData['password'],
         category: _parseCategory(profileData['category']),
       );
     } catch (e) {
@@ -166,7 +153,6 @@ class FirebaseService {
             id: profileData['id'],
             name: profileData['name'],
             username: profileData['username'],
-            password: profileData['password'],
             category: _parseCategory(profileData['category']),
           ));
         }
@@ -216,7 +202,6 @@ class FirebaseService {
           'id': profile.id,
           'name': profile.name,
           'username': profile.username,
-          'password': profile.password,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }
@@ -241,7 +226,6 @@ class FirebaseService {
         id: profileData['id'],
         name: profileData['name'],
         username: profileData['username'],
-        password: profileData['password'],
       );
     } catch (e) {
       return null;
@@ -398,10 +382,7 @@ class FirebaseService {
   Future<void> syncProfileWithFirebase(ProfileModel profile) async {
     try {
       // Verificar se o perfil já existe pelo username
-      ProfileModel? existingProfile;
-      if (profile.username != null) {
-        existingProfile = await getProfileByUsername(profile.username!);
-      }
+      var existingProfile = await getProfileByUsername(profile.username);
 
       // Se não encontrou pelo username, verificar pelo perfil atual
       if (existingProfile == null) {

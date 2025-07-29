@@ -4,7 +4,6 @@ import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
-import '../services/firebase_service.dart';
 import '../models/video_list_model.dart';
 import '../models/profile_model.dart';
 

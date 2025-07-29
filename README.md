@@ -20,6 +20,20 @@ Aplicativo Flutter para gerenciamento de listas de vídeos do YouTube, com múlt
 - Suporte a categorias de perfil (faixa etária)
 - Design responsivo (Material Design)
 - Suporte a modo escuro/claro (em breve)
+- **🔐 Autenticação segura** (Firebase Auth sem armazenar senhas no Firestore)
+
+---
+
+## 🛡️ Segurança
+
+O MyTubeList implementa uma arquitetura de segurança robusta:
+
+- **🔐 Firebase Auth**: Autenticação exclusiva via Firebase Auth
+- **🚫 Sem senhas no Firestore**: Senhas nunca são armazenadas no banco de dados
+- **🔒 Criptografia**: Firebase Auth gerencia toda a criptografia
+- **📱 Dados locais seguros**: Informações sensíveis apenas localmente quando necessário
+
+Veja mais detalhes em [SECURITY.md](SECURITY.md)
 
 ---
 
@@ -81,66 +95,6 @@ assets/
 ## ⚡ Como rodar o projeto
 
 1. **Clone o repositório**
-
-```bash
-git clone https://github.com/seu-usuario/my_tube_list.git
-cd my_tube_list
-```
-
-2. **Instale as dependências**
-
-```bash
-flutter pub get
-```
-
-3. **Configure o Firebase**
-
-- Adicione o arquivo `google-services.json` em `android/app/` (já incluso para debug)
-- O projeto já está pronto para autenticação e Firestore
-
-4. **Execute o projeto**
-
-```bash
-flutter run
-```
-
----
-
-## 🔑 Observações e dicas
-
-- Para busca dinâmica de vídeos, configure sua API Key do YouTube (ver `.env` se necessário)
-- Perfis podem ser criados localmente ou importados do Firebase
-- O app funciona offline para perfis locais
-- Suporte a múltiplas listas de vídeos por perfil
-
----
-
-## ✨ Próximos passos
-
-- 🔍 Busca de vídeos direto da API do YouTube (com API Key)
-- 📥 Suporte a download offline
-- 🗂️ Categorias personalizadas por perfil
-- 🌓 Tema escuro/claro automático
-
----
-
-## 🤝 Contribuições
-
-Contribuições são bem-vindas! Abra um Pull Request ou crie um Issue para sugerir melhorias.
-
----
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
-
----
-
-## 👤 Autor
-
-Feito com 💚 por Jodaías B. S.
-
-📫 Contato: <a href="https://www.linkedin.com/in/jodaias-barreto">Linkedin</a> • <a href="https://github.com/jodaias">Github</a>
 
 ```
 

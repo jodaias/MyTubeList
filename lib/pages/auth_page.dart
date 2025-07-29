@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
-import '../utils/confirmation_modal.dart';
 import '../models/profile_model.dart';
 
 class AuthPage extends StatefulWidget {
@@ -34,7 +32,7 @@ class _AuthPageState extends State<AuthPage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['profile'] != null) {
         _selectedProfile = args['profile'] as ProfileModel;
-        _usernameController.text = _selectedProfile!.username ?? '';
+        _usernameController.text = _selectedProfile?.username ?? '';
         _passwordController.text = '';
         setState(() {
           _isLogin = true;
@@ -119,7 +117,6 @@ class _AuthPageState extends State<AuthPage> {
                             ''); // Apenas letras, números e underscore
 
                     if (value != cleanValue) {
-                      final selection = _usernameController.selection;
                       _usernameController.value = TextEditingValue(
                         text: cleanValue,
                         selection:
@@ -171,7 +168,6 @@ class _AuthPageState extends State<AuthPage> {
                         .replaceAll(RegExp(r'[úùûü]'), 'u');
 
                     if (value != cleanValue) {
-                      final selection = _passwordController.selection;
                       _passwordController.value = TextEditingValue(
                         text: cleanValue,
                         selection:
@@ -328,7 +324,7 @@ class _AuthPageState extends State<AuthPage> {
               id: _usernameController.text.trim(),
               name: _nameController.text.trim(),
               username: _usernameController.text.trim(),
-              password: null, // Não armazenar senha localmente
+              password: null, // Não armazenar senha localmente por segurança
             );
 
             await localProfilesProvider.addProfile(newProfile);

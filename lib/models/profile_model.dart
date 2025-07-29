@@ -58,7 +58,8 @@ class ProfileModel extends HiveObject {
   final List<VideoListModel> videoLists;
 
   @HiveField(3)
-  final String? password;
+  final String?
+      password; // Apenas para armazenamento local (não será sincronizado com Firebase)
 
   @HiveField(4)
   final String? securityQuestion; // 🆕 pergunta secreta
@@ -75,7 +76,7 @@ class ProfileModel extends HiveObject {
     required this.username,
     this.category = UserCategory.adult,
     this.videoLists = const [],
-    this.password,
+    this.password, // Apenas para armazenamento local
     this.securityQuestion,
     this.securityAnswer,
   });
