@@ -24,7 +24,7 @@ class LocalProfilesProvider extends ChangeNotifier {
   Future<void> loadProfiles() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       // Carregar perfis salvos localmente
       _profiles = _box.values.toList();
@@ -32,7 +32,7 @@ class LocalProfilesProvider extends ChangeNotifier {
       _profiles = [];
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -40,7 +40,7 @@ class LocalProfilesProvider extends ChangeNotifier {
   Future<void> addProfile(ProfileModel profile) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       if (_box.containsKey(profile.id)) return;
 
@@ -58,7 +58,7 @@ class LocalProfilesProvider extends ChangeNotifier {
   Future<void> removeProfile(String profileId) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       if (!_box.containsKey(profileId)) return;
 
@@ -71,7 +71,7 @@ class LocalProfilesProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -79,7 +79,7 @@ class LocalProfilesProvider extends ChangeNotifier {
   Future<void> clearAllProfiles() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       // Limpar todos os perfis
       await _box.clear();
@@ -90,7 +90,7 @@ class LocalProfilesProvider extends ChangeNotifier {
       rethrow;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 

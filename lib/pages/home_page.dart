@@ -22,6 +22,7 @@ class _HomePageState extends State<HomePage> {
     // Sincronizar automaticamente quando a página for carregada
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _syncOnLoad();
+      _reloadVideoLists();
     });
   }
 
@@ -33,6 +34,18 @@ class _HomePageState extends State<HomePage> {
           .syncVideoListsWithFirebase(firebaseVideoListProvider.videoLists);
     } catch (e) {
       // Silently handle sync errors
+    }
+  }
+
+  Future<void> _reloadVideoLists() async {
+    try {
+      final firebaseVideoListProvider =
+          context.read<FirebaseVideoListProvider>();
+
+      // Recarregar as listas
+      await firebaseVideoListProvider.loadVideoLists();
+    } catch (e) {
+      // Silently handle reload errors
     }
   }
 
@@ -209,7 +222,25 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         body: firebaseVideoListProvider.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.green[700]!),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Carregando suas listas...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              )
             : lists.isEmpty
                 ? Center(
                     child: Column(

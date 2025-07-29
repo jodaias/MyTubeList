@@ -19,7 +19,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
   Future<void> _init() async {
     _isLoading = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    notifyListeners();
 
     try {
       // Verificar se está autenticado
@@ -33,7 +33,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       // Silently handle initialization errors
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -41,7 +41,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<void> checkAuthStatus() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       // Verificar se está autenticado
       _isAuthenticated = _firebaseService.currentUser != null;
@@ -54,7 +54,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       _isAuthenticated = false;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -62,7 +62,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<bool> signInWithUsername(String username, String password) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       final success =
           await _firebaseService.signInWithUsername(username, password);
@@ -78,7 +78,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -88,7 +88,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       {UserCategory? category}) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       final success = await _firebaseService
           .createUserWithPassword(username, password, name, category: category);
@@ -104,7 +104,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -140,7 +140,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.signOut();
       _isAuthenticated = false;
@@ -149,7 +149,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       // Silently handle logout errors
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -157,7 +157,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<void> deleteCurrentUser() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.deleteCurrentUser();
       _isAuthenticated = false;
@@ -166,7 +166,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       // Silently handle delete errors
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -174,7 +174,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<bool> syncProfileWithFirebase(ProfileModel profile) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.syncProfileWithFirebase(profile);
       _currentProfile = profile;
@@ -184,7 +184,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       return false;
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -192,14 +192,14 @@ class FirebaseProfileProvider extends ChangeNotifier {
   Future<void> reloadProfile() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       _currentProfile = await _firebaseService.getProfile();
     } catch (e) {
       // Silently handle reload errors
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 }

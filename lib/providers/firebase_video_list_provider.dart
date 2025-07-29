@@ -12,33 +12,26 @@ class FirebaseVideoListProvider extends ChangeNotifier {
   List<VideoListModel> get videoLists => _videoLists;
   bool get isLoading => _isLoading;
 
-  FirebaseVideoListProvider() {
-    _init();
-  }
-
-  Future<void> _init() async {
-    await loadVideoLists();
-  }
-
   /// 📋 Carregar listas de vídeos do Firebase
   Future<void> loadVideoLists() async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       _videoLists = await _firebaseService.getVideoLists();
-    } catch (e) {
-      // Silently handle load errors
-    } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      // Silently handle load errors
     }
   }
 
   /// ➕ Criar nova lista de vídeos
   Future<bool> createVideoList(String name, String profileId) async {
     try {
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       final videoList = VideoListModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -54,7 +47,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       // Silently handle creation errors
       return false;
     } finally {
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -62,7 +55,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
   Future<bool> updateVideoList(VideoListModel videoList) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.updateVideoList(videoList);
 
@@ -71,20 +64,21 @@ class FirebaseVideoListProvider extends ChangeNotifier {
         _videoLists[index] = videoList;
       }
 
+      _isLoading = false;
+      notifyListeners();
       return true;
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       // Silently handle update errors
       return false;
-    } finally {
-      _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     }
   }
 
   /// ❌ Deletar lista de vídeos
   Future<bool> deleteVideoList(String listId) async {
     try {
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.deleteVideoList(listId);
       _videoLists.removeWhere((list) => list.id == listId);
@@ -94,7 +88,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       // Silently handle delete errors
       return false;
     } finally {
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -174,24 +168,20 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       List<VideoListModel> videoLists) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       await _firebaseService.syncVideoListsWithFirebase(videoLists);
       _videoLists = videoLists;
 
+      _isLoading = false;
+      notifyListeners();
       return true;
     } catch (e) {
+      _isLoading = false;
+      notifyListeners();
       // Silently handle sync errors
       return false;
-    } finally {
-      _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     }
-  }
-
-  /// 🔄 Recarregar listas
-  Future<void> reloadVideoLists() async {
-    await loadVideoLists();
   }
 
   /// 📋 Atualizar ordem dos vídeos
@@ -221,7 +211,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
   Future<void> clearLocalData() async {
     try {
       _videoLists.clear();
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     } catch (e) {
       // Silently handle clear errors
     }

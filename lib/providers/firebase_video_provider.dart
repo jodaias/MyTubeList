@@ -29,7 +29,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
   Future<List<VideoModel>> search(String query) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       List<YouTubeVideo> results =
           await _youtubeApi.search(query, type: "video");
@@ -48,17 +48,21 @@ class FirebaseVideoProvider extends ChangeNotifier {
       return [];
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
   /// 📝 Adicionar termo de busca ao histórico do Firebase
   Future<void> addSearchTerm(String term, String profileId) async {
     try {
+      notifyListeners();
+
       await _firebaseService.addSearchTerm(term, profileId);
       await loadPreviousSearches(profileId);
     } catch (e) {
       // Silently handle add search term errors
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -66,7 +70,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
   Future<void> loadPreviousSearches(String profileId) async {
     try {
       _isLoading = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
 
       _previousSearches = await _firebaseService.getSearchHistory(profileId);
     } catch (e) {
@@ -74,7 +78,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
       _previousSearches = [];
     } finally {
       _isLoading = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     }
   }
 
@@ -84,7 +88,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
       // Verificar se o vídeo já existe
       if (!_allCachedVideos.any((v) => v.id == video.id)) {
         _allCachedVideos.add(video);
-        WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+        notifyListeners();
       }
     } catch (e) {
       // Silently handle cache errors
@@ -95,7 +99,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
   Future<void> removeVideoFromCache(String videoId) async {
     try {
       _allCachedVideos.removeWhere((video) => video.id == videoId);
-      WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      notifyListeners();
     } catch (e) {
       // Silently handle remove cache errors
     }
@@ -116,7 +120,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
   /// 🧹 Limpar cache local
   void clearCache() {
     _allCachedVideos.clear();
-    WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    notifyListeners();
   }
 
   /// 🔍 Verificar se vídeo está no cache
