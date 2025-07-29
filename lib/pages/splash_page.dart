@@ -27,7 +27,6 @@ class _SplashPageState extends State<SplashPage>
     // Verificar se usuário está logado após 3 segundos
     Future.delayed(const Duration(seconds: 3), () async {
       final firebaseProvider = context.read<FirebaseProfileProvider>();
-      // final localProvider = context.read<ProfileProvider>(); // Removido
 
       try {
         await firebaseProvider.checkAuthStatus();
@@ -46,11 +45,6 @@ class _SplashPageState extends State<SplashPage>
       } catch (e) {
         // Continua mesmo com erro do Firebase
         Navigator.of(context).pushReplacementNamed('/profiles');
-      }
-
-      if (mounted) {
-        // Sempre redirecionar para página de perfis como página inicial
-        // Navigator.of(context).pushReplacementNamed('/profiles');
       }
     });
   }
