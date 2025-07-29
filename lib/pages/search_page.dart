@@ -48,9 +48,12 @@ class _SearchPageState extends State<SearchPage> {
 
     // Validação matemática apenas uma vez
     if (!_hasValidated) {
-      final canEnter = await showMathConfirmationModal(
-          context, "Acesso a modal: buscar vídeos!", "confirmar");
-      if (!canEnter) return;
+      final firebaseProfileProvider = context.read<FirebaseProfileProvider>();
+
+      final canAccess = await showMathConfirmationModal(
+          context, "Acesso a modal: buscar vídeos!", "confirmar",
+          userCategory: firebaseProfileProvider.currentProfile?.category);
+      if (!canAccess) return;
       _hasValidated = true;
     }
 

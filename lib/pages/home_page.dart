@@ -47,43 +47,52 @@ class _HomePageState extends State<HomePage> {
       String profileId,
       FirebaseProfileProvider firebaseProfileProvider,
       ProfileModel profile) async {
-    final canEnter = await showMathConfirmationModal(
-        context, "Excluir perfil?", "confirmar",
+    // Sempre exibe confirmação simples antes do desafio
+    final confirm = await showConfirmationDialog(
+      context,
+      title: 'Excluir perfil',
+      content:
+          'Tem certeza que deseja excluir este perfil? Esta ação não poderá ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+    );
+    if (!confirm) return;
+    // Se for criança, faz o desafio matemático
+    final canAccess = await showMathConfirmationModal(
+        context, "Confirmação extra", "excluir",
         userCategory: profile.category);
-    if (canEnter) {
-      try {
-        // Salvar o username antes de deletar do Firebase
-        final usernameToDelete =
-            firebaseProfileProvider.currentProfile?.username;
+    if (!canAccess) return;
+    try {
+      // Salvar o username antes de deletar do Firebase
+      final usernameToDelete = firebaseProfileProvider.currentProfile?.username;
 
-        // Deletar do Firebase
-        await firebaseProfileProvider.deleteCurrentUser();
+      // Deletar do Firebase
+      await firebaseProfileProvider.deleteCurrentUser();
 
-        // Deletar do Hive (armazenamento local)
-        final localProfilesProvider = context.read<LocalProfilesProvider>();
+      // Deletar do Hive (armazenamento local)
+      final localProfilesProvider = context.read<LocalProfilesProvider>();
 
-        if (usernameToDelete != null) {
-          final localProfile =
-              localProfilesProvider.getProfileByUsername(usernameToDelete);
+      if (usernameToDelete != null) {
+        final localProfile =
+            localProfilesProvider.getProfileByUsername(usernameToDelete);
 
-          if (localProfile != null) {
-            await localProfilesProvider.removeProfile(localProfile.id);
-          } else {
-            // Fallback: tentar deletar pelo username
-            await localProfilesProvider.removeProfile(usernameToDelete);
-          }
+        if (localProfile != null) {
+          await localProfilesProvider.removeProfile(localProfile.id);
+        } else {
+          // Fallback: tentar deletar pelo username
+          await localProfilesProvider.removeProfile(usernameToDelete);
         }
-
-        // Recarregar lista de perfis locais
-        await localProfilesProvider.loadProfiles();
-
-        // Redirecionar para página de auth
-        Navigator.pushNamedAndRemoveUntil(context, '/auth', (r) => false);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao deletar perfil: $e')),
-        );
       }
+
+      // Recarregar lista de perfis locais
+      await localProfilesProvider.loadProfiles();
+
+      // Redirecionar para página de auth
+      Navigator.pushNamedAndRemoveUntil(context, '/auth', (r) => false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao deletar perfil: $e')),
+      );
     }
   }
 
@@ -118,233 +127,266 @@ class _HomePageState extends State<HomePage> {
     final lists =
         firebaseVideoListProvider.getListsByProfile(selectedProfile.id);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.green[700],
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          onPressed: () => _logout(context),
-          icon: const Icon(Icons.logout, color: Colors.white),
-        ),
-        title: Column(
-          children: [
-            Text(
-              'Minhas Listas',
-              style: const TextStyle(color: Colors.white),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          final shouldLogout = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Sair do perfil?'),
+              content: const Text(
+                  'Deseja realmente sair do perfil e voltar para a seleção de perfis?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Sair'),
+                ),
+              ],
             ),
-            Text(
-              'Perfil: ${selectedProfile.name}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
+          );
+          if (shouldLogout == true) {
+            _logout(context);
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.green[700],
+          iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout, color: Colors.white),
+          ),
+          title: Column(
+            children: [
+              Text(
+                'Minhas Listas',
+                style: const TextStyle(color: Colors.white),
               ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: [
-          PopupMenuButton<String>(
-            iconColor: Colors.white,
-            onSelected: (value) async {
-              if (value == 'create_list') {
-                final canEnter = await showMathConfirmationModal(
-                    context, "Acesso a modal: criar lista!", "confirmar",
-                    userCategory: selectedProfile.category);
-                if (canEnter) {
-                  _showCreateListDialog(
-                      context, firebaseVideoListProvider, selectedProfile.id);
-                }
-              } else if (value == 'delete_profile') {
-                await _handleDeleteProfile(context, selectedProfile.id,
-                    firebaseProfileProvider, selectedProfile);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'create_list',
-                child: Text('➕ Criar Lista'),
-              ),
-              const PopupMenuItem(
-                value: 'delete_profile',
-                child: Text('🗑️ Deletar Perfil'),
+              Text(
+                'Perfil: ${selectedProfile.name}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
-        ],
-      ),
-      body: lists.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.playlist_add,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Nenhuma lista criada ainda',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Crie sua primeira lista de vídeos!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-              ),
-              itemCount: lists.length,
-              itemBuilder: (context, index) {
-                final list = lists[index];
-                return Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/videos',
-                        arguments: {'listId': list.id},
-                      );
-                    },
-                    child: Stack(
+          centerTitle: true,
+          actions: [
+            PopupMenuButton<String>(
+              iconColor: Colors.white,
+              onSelected: (value) async {
+                if (value == 'create_list') {
+                  final canAccess = await showMathConfirmationModal(
+                      context, "Acesso a modal: criar lista!", "confirmar",
+                      userCategory: selectedProfile.category);
+                  if (!canAccess) return;
+
+                  _showCreateListDialog(
+                      context, firebaseVideoListProvider, selectedProfile.id);
+                } else if (value == 'delete_profile') {
+                  await _handleDeleteProfile(context, selectedProfile.id,
+                      firebaseProfileProvider, selectedProfile);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'create_list',
+                  child: Text('➕ Criar Lista'),
+                ),
+                const PopupMenuItem(
+                  value: 'delete_profile',
+                  child: Text('🗑️ Deletar Perfil'),
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: firebaseVideoListProvider.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : lists.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.playlist_play,
-                                color: Colors.green[700],
-                                size: 48,
-                              ),
-                              const SizedBox(height: 12),
-                              Flexible(
-                                child: Text(
-                                  list.name,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${list.videos.length} vídeos',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
+                        Icon(
+                          Icons.playlist_add,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nenhuma lista criada ainda',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
                           ),
                         ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: PopupMenuButton(
-                            onSelected: (value) {
-                              if (value == 'play') {
-                                Navigator.pushNamed(context, '/player',
-                                    arguments: {
-                                      'listId': list.id,
-                                      'videos': list.videos,
-                                    });
-                              } else if (value == 'add') {
-                                Navigator.pushNamed(context, '/search',
-                                    arguments: list.id);
-                              } else if (value == 'rename') {
-                                _showRenameListDialog(
-                                    context, firebaseVideoListProvider, list);
-                              } else if (value == 'duplicate') {
-                                _showDuplicateListDialog(
-                                    context,
-                                    firebaseVideoListProvider,
-                                    list,
-                                    selectedProfile.id);
-                              } else if (value == 'share') {
-                                _showShareListDialog(context, list);
-                              } else if (value == 'delete') {
-                                _showDeleteListDialog(
-                                    context, firebaseVideoListProvider, list);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'play',
-                                enabled: list.videos.isNotEmpty,
-                                child: Text(
-                                  'Tocar lista',
-                                  style: TextStyle(
-                                    color: list.videos.isNotEmpty
-                                        ? null
-                                        : Colors.grey,
-                                  ),
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'add',
-                                child: Text('Adicionar vídeos'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'rename',
-                                child: Text('Renomear lista'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'duplicate',
-                                child: Text('Duplicar lista'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'share',
-                                child: Text('Compartilhar'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Excluir lista'),
-                              ),
-                            ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Crie sua primeira lista de vídeos!',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ],
                     ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 1.2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: lists.length,
+                    itemBuilder: (context, index) {
+                      final list = lists[index];
+                      return Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/videos',
+                              arguments: {'listId': list.id},
+                            );
+                          },
+                          child: Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.playlist_play,
+                                      color: Colors.green[700],
+                                      size: 48,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Flexible(
+                                      child: Text(
+                                        list.name,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '${list.videos.length} vídeos',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: PopupMenuButton(
+                                  onSelected: (value) {
+                                    if (value == 'play') {
+                                      Navigator.pushNamed(context, '/player',
+                                          arguments: {
+                                            'listId': list.id,
+                                            'videos': list.videos,
+                                          });
+                                    } else if (value == 'add') {
+                                      Navigator.pushNamed(context, '/search',
+                                          arguments: list.id);
+                                    } else if (value == 'rename') {
+                                      _showRenameListDialog(context,
+                                          firebaseVideoListProvider, list);
+                                    } else if (value == 'duplicate') {
+                                      _showDuplicateListDialog(
+                                          context,
+                                          firebaseVideoListProvider,
+                                          list,
+                                          selectedProfile);
+                                    } else if (value == 'share') {
+                                      _showShareListDialog(context, list);
+                                    } else if (value == 'delete') {
+                                      _showDeleteListDialog(
+                                          context,
+                                          firebaseVideoListProvider,
+                                          list,
+                                          selectedProfile);
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'play',
+                                      enabled: list.videos.isNotEmpty,
+                                      child: Text(
+                                        'Tocar lista',
+                                        style: TextStyle(
+                                          color: list.videos.isNotEmpty
+                                              ? null
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'add',
+                                      child: Text('Adicionar vídeos'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'rename',
+                                      child: Text('Renomear lista'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'duplicate',
+                                      child: Text('Duplicar lista'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'share',
+                                      child: Text('Compartilhar'),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text('Excluir lista'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final canEnter = await showMathConfirmationModal(
-              context, "Acesso a modal: criar lista!", "confirmar",
-              userCategory: selectedProfile.category);
-          if (canEnter) {
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            final canAccess = await showMathConfirmationModal(
+                context, "Acesso a modal: criar lista!", "confirmar",
+                userCategory: selectedProfile.category);
+            if (!canAccess) return;
             _showCreateListDialog(
                 context, firebaseVideoListProvider, selectedProfile.id);
-          }
-        },
-        backgroundColor: Colors.green[700],
-        child: const Icon(Icons.add, color: Colors.white),
+          },
+          backgroundColor: Colors.green[700],
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
@@ -376,8 +418,39 @@ class _HomePageState extends State<HomePage> {
               onPressed: nameController.text.trim().isNotEmpty
                   ? () async {
                       if (nameController.text.trim().isNotEmpty) {
-                        await videoListProvider.createVideoList(
-                            nameController.text.trim(), profileId);
+                        // Mostra loading
+                        await showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (dialogContext) {
+                            Future.microtask(() async {
+                              await videoListProvider.createVideoList(
+                                  nameController.text.trim(), profileId);
+                              if (Navigator.of(dialogContext,
+                                      rootNavigator: true)
+                                  .canPop()) {
+                                Navigator.of(dialogContext, rootNavigator: true)
+                                    .pop();
+                              }
+                            });
+                            return AlertDialog(
+                              title: const Text('Criando lista...'),
+                              content: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text('Criando...'),
+                                ],
+                              ),
+                            );
+                          },
+                        );
                         Navigator.pop(context);
                       }
                     }
@@ -431,12 +504,54 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showDeleteListDialog(BuildContext context,
-      FirebaseVideoListProvider videoListProvider, VideoListModel list) async {
-    final canEnter = await showMathConfirmationModal(context,
-        "Excluir esta lista? Ação não poderá ser desfeita.", "excluir");
-    if (canEnter) {
-      await videoListProvider.deleteVideoList(list.id);
+  void _showDeleteListDialog(
+      BuildContext context,
+      FirebaseVideoListProvider videoListProvider,
+      VideoListModel list,
+      ProfileModel profile) async {
+    // Sempre exibe confirmação simples antes do loading
+    final confirm = await showConfirmationDialog(
+      context,
+      title: 'Excluir lista',
+      content:
+          'Tem certeza que deseja excluir esta lista? Esta ação não poderá ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+    );
+    if (confirm) {
+      // Se for criança, faz o desafio matemático
+      final canDelete = await showMathConfirmationModal(
+          context, "Confirmação extra", "excluir",
+          userCategory: profile.category);
+      if (!canDelete) return;
+      // Loading
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          Future.microtask(() async {
+            await videoListProvider.deleteVideoList(list.id);
+            if (Navigator.of(dialogContext, rootNavigator: true).canPop()) {
+              Navigator.of(dialogContext, rootNavigator: true).pop();
+            }
+          });
+          return AlertDialog(
+            title: const Text('Excluindo lista...'),
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('Excluindo...'),
+              ],
+            ),
+          );
+        },
+      );
     }
   }
 
@@ -444,72 +559,71 @@ class _HomePageState extends State<HomePage> {
       BuildContext context,
       FirebaseVideoListProvider videoListProvider,
       VideoListModel list,
-      String profileId) async {
-    final canEnter = await showMathConfirmationModal(
-        context, "Acesso a modal: duplicar lista!", "confirmar");
-    if (canEnter) {
-      final nameController =
-          TextEditingController(text: '${list.name} (cópia)');
+      ProfileModel profile) async {
+    final canAccess = await showMathConfirmationModal(
+        context, "Acesso a modal: duplicar lista!", "confirmar",
+        userCategory: profile.category);
+    if (!canAccess) return;
 
-      showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: const Text('Duplicar Lista'),
-            content: TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nome da nova lista',
-                hintText: 'Ex: Músicas Favoritas (cópia)',
-              ),
-              autofocus: true,
-              onChanged: (value) => setState(() {}),
+    final nameController = TextEditingController(text: '${list.name} (cópia)');
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Duplicar Lista'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'Nome da nova lista',
+              hintText: 'Ex: Músicas Favoritas (cópia)',
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: nameController.text.trim().isNotEmpty
-                    ? () async {
-                        if (nameController.text.trim().isNotEmpty) {
-                          // Criar nova lista
-                          final success =
-                              await videoListProvider.createVideoList(
-                                  nameController.text.trim(), profileId);
-
-                          if (success) {
-                            // Aguardar um pouco para a lista ser criada
-                            await Future.delayed(
-                                const Duration(milliseconds: 500));
-
-                            // Encontrar a lista recém-criada
-                            final newLists =
-                                videoListProvider.getListsByProfile(profileId);
-                            final newList = newLists.lastWhere(
-                              (list) => list.name == nameController.text.trim(),
-                              orElse: () => newLists.last,
-                            );
-
-                            // Adicionar todos os vídeos da lista original
-                            for (final video in list.videos) {
-                              await videoListProvider.addVideoToList(
-                                  newList.id, video);
-                            }
-                          }
-
-                          Navigator.pop(context);
-                        }
-                      }
-                    : null,
-                child: const Text('Duplicar'),
-              ),
-            ],
+            autofocus: true,
+            onChanged: (value) => setState(() {}),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: nameController.text.trim().isNotEmpty
+                  ? () async {
+                      if (nameController.text.trim().isNotEmpty) {
+                        // Criar nova lista
+                        final success = await videoListProvider.createVideoList(
+                            nameController.text.trim(), profile.id);
+
+                        if (success) {
+                          // Aguardar um pouco para a lista ser criada
+                          await Future.delayed(
+                              const Duration(milliseconds: 500));
+
+                          // Encontrar a lista recém-criada
+                          final newLists =
+                              videoListProvider.getListsByProfile(profile.id);
+                          final newList = newLists.lastWhere(
+                            (list) => list.name == nameController.text.trim(),
+                            orElse: () => newLists.last,
+                          );
+
+                          // Adicionar todos os vídeos da lista original
+                          for (final video in list.videos) {
+                            await videoListProvider.addVideoToList(
+                                newList.id, video);
+                          }
+                        }
+
+                        Navigator.pop(context);
+                      }
+                    }
+                  : null,
+              child: const Text('Duplicar'),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
 
   void _showShareListDialog(BuildContext context, VideoListModel list) {

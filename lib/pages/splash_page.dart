@@ -31,13 +31,26 @@ class _SplashPageState extends State<SplashPage>
 
       try {
         await firebaseProvider.checkAuthStatus();
+        if (firebaseProvider.isAuthenticated) {
+          // Carregar listas de vídeos do Firebase
+          final firebaseVideoListProvider =
+              context.read<FirebaseVideoListProvider>();
+          await firebaseVideoListProvider.loadVideoLists();
+
+          // Redirecionar para a página inicial
+          Navigator.of(context).pushReplacementNamed('/home');
+        } else {
+          // Redirecionar para a página de perfis
+          Navigator.of(context).pushReplacementNamed('/profiles');
+        }
       } catch (e) {
         // Continua mesmo com erro do Firebase
+        Navigator.of(context).pushReplacementNamed('/profiles');
       }
 
       if (mounted) {
         // Sempre redirecionar para página de perfis como página inicial
-        Navigator.of(context).pushReplacementNamed('/profiles');
+        // Navigator.of(context).pushReplacementNamed('/profiles');
       }
     });
   }

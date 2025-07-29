@@ -42,30 +42,40 @@ class _VideosPageState extends State<VideosPage> {
     final firebaseProfileProvider = context.read<FirebaseProfileProvider>();
     final currentProfile = firebaseProfileProvider.currentProfile;
 
-    final confirmed = await showMathConfirmationModal(
-        context, "Excluir ${_selectedVideos.length} vídeo(s)?", "Confirmar",
-        userCategory: currentProfile?.category);
-    if (confirmed) {
-      final firebaseVideoListProvider =
-          context.read<FirebaseVideoListProvider>();
-      for (final videoId in _selectedVideos) {
-        await firebaseVideoListProvider.removeVideoFromList(
-            widget.listId, videoId);
-      }
-      setState(() {
-        _selectedVideos.clear();
-        _isSelectionMode = false;
-      });
+    // Confirmação simples
+    final confirm = await showConfirmationDialog(
+      context,
+      title: 'Excluir vídeos',
+      content:
+          'Tem certeza que deseja excluir ${_selectedVideos.length} vídeo(s)? Esta ação não poderá ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+    );
+    if (!confirm) return;
+    // Se for criança, faz o desafio matemático
+    final canDelete = await showMathConfirmationModal(
+      context,
+      "Confirmação extra",
+      "excluir",
+      userCategory: currentProfile?.category,
+    );
+    if (!canDelete) return;
+    final firebaseVideoListProvider = context.read<FirebaseVideoListProvider>();
+    for (final videoId in _selectedVideos) {
+      await firebaseVideoListProvider.removeVideoFromList(
+          widget.listId, videoId);
     }
+    setState(() {
+      _selectedVideos.clear();
+      _isSelectionMode = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final firebaseVideoListProvider =
         context.watch<FirebaseVideoListProvider>();
-    final firebaseProfileProvider = context.watch<FirebaseProfileProvider>();
     final videoList = firebaseVideoListProvider.getVideoListById(widget.listId);
-    final currentProfile = firebaseProfileProvider.currentProfile;
 
     if (videoList == null) {
       return Scaffold(
@@ -218,24 +228,37 @@ class _VideosPageState extends State<VideosPage> {
                           final currentProfile =
                               firebaseProfileProvider.currentProfile;
 
-                          final confirmed = await showMathConfirmationModal(
-                              context, "Excluir vídeo?", "Confirmar",
-                              userCategory: currentProfile?.category);
-                          if (confirmed) {
-                            setState(() {
-                              _deletingVideos.add(video.id);
-                            });
+                          // Confirmação simples
+                          final confirm = await showConfirmationDialog(
+                            context,
+                            title: 'Excluir vídeo',
+                            content:
+                                'Tem certeza que deseja excluir este vídeo? Esta ação não poderá ser desfeita.',
+                            confirmText: 'Excluir',
+                            cancelText: 'Cancelar',
+                          );
+                          if (!confirm) return;
+                          // Se for criança, faz o desafio matemático
+                          final canDelete = await showMathConfirmationModal(
+                            context,
+                            "Confirmação extra",
+                            "excluir",
+                            userCategory: currentProfile?.category,
+                          );
+                          if (!canDelete) return;
+                          setState(() {
+                            _deletingVideos.add(video.id);
+                          });
 
-                            try {
-                              await firebaseVideoListProvider
-                                  .removeVideoFromList(widget.listId, video.id);
-                              videoList.videos
-                                  .removeWhere((v) => v.id == video.id);
-                            } finally {
-                              setState(() {
-                                _deletingVideos.remove(video.id);
-                              });
-                            }
+                          try {
+                            await firebaseVideoListProvider.removeVideoFromList(
+                                widget.listId, video.id);
+                            videoList.videos
+                                .removeWhere((v) => v.id == video.id);
+                          } finally {
+                            setState(() {
+                              _deletingVideos.remove(video.id);
+                            });
                           }
                         },
                 );

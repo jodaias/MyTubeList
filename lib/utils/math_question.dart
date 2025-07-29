@@ -6,14 +6,14 @@ class MathQuestion {
 
   MathQuestion(this.a, this.b);
 
-  int get answer => a + b;
+  int get answer => a * b;
 
-  String get question => '$a + $b = ?';
+  String get question => '$a * $b = ?';
 }
 
 MathQuestion generateRandomQuestion() {
   final random = Random();
-  final a = random.nextInt(8) + 3;
-  final b = random.nextInt(8) + 3;
+  final a = random.nextInt(8) + 2;
+  final b = random.nextInt(8) + 2;
   return MathQuestion(a, b);
 }

@@ -13,16 +13,8 @@ bool shouldShowMathChallenge(UserCategory? category) {
 Future<bool> showMathConfirmationModal(
     BuildContext context, String title, String textBtn,
     {UserCategory? userCategory}) async {
-  // Verificar se deve mostrar o desafio matemático
-  if (!shouldShowMathChallenge(userCategory)) {
-    // Se não deve mostrar o desafio, mostrar confirmação simples
-    return await showConfirmationDialog(
-      context,
-      title: title,
-      content: 'Deseja continuar?',
-      confirmText: textBtn,
-    );
-  }
+  // Se não deve mostrar o desafio matemático (não é criança), retorna true direto
+  if (!shouldShowMathChallenge(userCategory)) return true;
 
   // Mostrar desafio matemático para crianças
   final question = generateRandomQuestion();

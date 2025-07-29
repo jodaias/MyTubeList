@@ -38,7 +38,6 @@ class FirebaseVideoListProvider extends ChangeNotifier {
   /// ➕ Criar nova lista de vídeos
   Future<bool> createVideoList(String name, String profileId) async {
     try {
-      _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
 
       final videoList = VideoListModel(
@@ -55,7 +54,6 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       // Silently handle creation errors
       return false;
     } finally {
-      _isLoading = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     }
   }
@@ -86,7 +84,6 @@ class FirebaseVideoListProvider extends ChangeNotifier {
   /// ❌ Deletar lista de vídeos
   Future<bool> deleteVideoList(String listId) async {
     try {
-      _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
 
       await _firebaseService.deleteVideoList(listId);
@@ -97,7 +94,6 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       // Silently handle delete errors
       return false;
     } finally {
-      _isLoading = false;
       WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     }
   }

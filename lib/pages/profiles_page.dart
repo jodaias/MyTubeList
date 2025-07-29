@@ -893,7 +893,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                                               ),
                                               onSelected: (value) async {
                                                 if (value == 'remove_local') {
-                                                  final confirmed =
+                                                  final canRemove =
                                                       await showMathConfirmationModal(
                                                     context,
                                                     "Remover perfil local?",
@@ -901,7 +901,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                                                     userCategory:
                                                         profile.category,
                                                   );
-                                                  if (confirmed) {
+                                                  if (canRemove) {
                                                     await localProfilesProvider
                                                         .removeProfile(
                                                             profile.id);
