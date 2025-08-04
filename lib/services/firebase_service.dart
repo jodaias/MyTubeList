@@ -503,4 +503,35 @@ class FirebaseService {
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
+
+  /// 📧 Verificar se o email está verificado
+  bool isEmailVerified() {
+    final user = currentUser;
+    return user?.emailVerified ?? false;
+  }
+
+  /// 📧 Enviar email de verificação
+  Future<bool> sendEmailVerification() async {
+    try {
+      final user = currentUser;
+      if (user == null) return false;
+
+      await user.sendEmailVerification();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 🔄 Recarregar dados do usuário (para atualizar status de verificação)
+  Future<void> reloadUser() async {
+    try {
+      final user = currentUser;
+      if (user != null) {
+        await user.reload();
+      }
+    } catch (e) {
+      // Silently handle reload errors
+    }
+  }
 }

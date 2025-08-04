@@ -35,6 +35,16 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadCurrentEmail();
+    _reloadEmailStatus();
+  }
+
+  Future<void> _reloadEmailStatus() async {
+    try {
+      final firebaseProvider = context.read<FirebaseProfileProvider>();
+      await firebaseProvider.reloadUser();
+    } catch (e) {
+      // Silently handle reload errors
+    }
   }
 
   @override
@@ -130,6 +140,96 @@ class _SettingsPageState extends State<SettingsPage> {
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.grey[600],
                             ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Status de verificação do email
+                      Consumer<FirebaseProfileProvider>(
+                        builder: (context, provider, child) {
+                          final isVerified = provider.isEmailVerified();
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isVerified
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    isVerified ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isVerified ? Icons.verified : Icons.warning,
+                                  color:
+                                      isVerified ? Colors.green : Colors.orange,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isVerified
+                                        ? 'Email verificado'
+                                        : 'Email não verificado',
+                                    style: TextStyle(
+                                      color: isVerified
+                                          ? Colors.green
+                                          : Colors.orange,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                if (!isVerified) ...[
+                                  TextButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () async {
+                                            final success = await provider
+                                                .sendEmailVerification();
+                                            if (success) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                      'Email de verificação enviado! Verifique sua caixa de entrada.'),
+                                                  backgroundColor: Colors.green,
+                                                ),
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                      'Erro ao enviar email de verificação.'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          },
+                                    child: const Text('Verificar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: _isLoading
+                                        ? null
+                                        : () async {
+                                            await provider.reloadUser();
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                content:
+                                                    Text('Status atualizado!'),
+                                                backgroundColor: Colors.blue,
+                                              ),
+                                            );
+                                          },
+                                    child: const Text('Atualizar'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

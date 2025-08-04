@@ -260,4 +260,36 @@ class FirebaseProfileProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// 📧 Verificar se o email está verificado
+  bool isEmailVerified() {
+    return _firebaseService.isEmailVerified();
+  }
+
+  /// 📧 Enviar email de verificação
+  Future<bool> sendEmailVerification() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final success = await _firebaseService.sendEmailVerification();
+
+      return success;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// 🔄 Recarregar dados do usuário (para atualizar status de verificação)
+  Future<void> reloadUser() async {
+    try {
+      await _firebaseService.reloadUser();
+      notifyListeners();
+    } catch (e) {
+      // Silently handle reload errors
+    }
+  }
 }
