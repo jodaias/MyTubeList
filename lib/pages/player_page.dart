@@ -22,30 +22,25 @@ class PlayerPage extends StatefulWidget {
 
 class _PlayerPageState extends State<PlayerPage> {
   late YoutubePlayerController _controller;
-
   final ScrollController _scrollController = ScrollController();
-
   late int _currentIndex;
   bool _showList = false;
   bool _repeat = false;
+  bool isFullScreen = false;
   bool _currentStatusPlaying = true;
-
-  // 🔑 GlobalKeys para cada item
   late List<GlobalKey> _itemKeys;
+
+  // Feedback de 10s
+  bool _showForward = false;
+  bool _showBackward = false;
 
   @override
   void initState() {
     super.initState();
-
     _currentIndex = widget.currentIndex;
-
     _setupController();
 
-    // inicializa keys
-    _itemKeys = List.generate(
-      widget.videos.length,
-      (_) => GlobalKey(),
-    );
+    _itemKeys = List.generate(widget.videos.length, (_) => GlobalKey());
 
     _controller.addListener(() {
       if (mounted && _currentStatusPlaying != _controller.value.isPlaying) {
@@ -71,6 +66,7 @@ class _PlayerPageState extends State<PlayerPage> {
         controlsVisibleAtStart: false,
         enableCaption: false,
         disableDragSeek: true,
+        hideThumbnail: true,
         showLiveFullscreenButton: true,
       ),
     );
@@ -85,7 +81,6 @@ class _PlayerPageState extends State<PlayerPage> {
       curve: Curves.easeInOut,
     );
 
-    // Opcional: após scroll, garante visibilidade exata via ensureVisible
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_itemKeys[index].currentContext != null) {
         Scrollable.ensureVisible(
@@ -102,6 +97,37 @@ class _PlayerPageState extends State<PlayerPage> {
       if (_currentIndex != index) _repeat = false;
       _currentIndex = index;
       _controller.load(widget.videos[_currentIndex].id, startAt: startAt);
+    });
+  }
+
+  void _skipForward() {
+    final current = _controller.value.position.inSeconds;
+    _controller.seekTo(Duration(seconds: current + 10));
+    _showFeedback(isForward: true);
+  }
+
+  void _skipBackward() {
+    final current = _controller.value.position.inSeconds;
+    _controller.seekTo(Duration(seconds: (current - 10).clamp(0, current)));
+    _showFeedback(isForward: false);
+  }
+
+  void _showFeedback({required bool isForward}) {
+    setState(() {
+      if (isForward) {
+        _showForward = true;
+      } else {
+        _showBackward = true;
+      }
+    });
+
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() {
+          _showForward = false;
+          _showBackward = false;
+        });
+      }
     });
   }
 
@@ -123,15 +149,22 @@ class _PlayerPageState extends State<PlayerPage> {
           onExitFullScreen: () {
             setState(() {
               _showList = false;
+              isFullScreen = false;
             });
+
             WidgetsBinding.instance.addPostFrameCallback((_) {
               scrollToIndex(_currentIndex);
+            });
+          },
+          onEnterFullScreen: () {
+            setState(() {
+              isFullScreen = true;
             });
           },
           player: YoutubePlayer(
             controller: _controller,
             showVideoProgressIndicator: true,
-            controlsTimeOut: Duration(seconds: 5),
+            controlsTimeOut: const Duration(seconds: 5),
             progressIndicatorColor: Colors.blueAccent,
             topActions: [
               Expanded(
@@ -141,15 +174,12 @@ class _PlayerPageState extends State<PlayerPage> {
                     if (isLandscape)
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          minimumSize: Size(40, 40),
+                          minimumSize: const Size(40, 40),
                           padding: EdgeInsets.zero,
-                          shape: CircleBorder(),
+                          shape: const CircleBorder(),
                         ),
                         onPressed: () {
-                          setState(() {
-                            _showList = !_showList;
-                          });
-
+                          setState(() => _showList = !_showList);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             scrollToIndex(_currentIndex, itemHeight: 116.0);
                           });
@@ -185,9 +215,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   color: _repeat ? Colors.greenAccent : Colors.white,
                 ),
                 onPressed: () {
-                  setState(() {
-                    _repeat = !_repeat;
-                  });
+                  setState(() => _repeat = !_repeat);
                 },
               ),
               const SizedBox(width: 8),
@@ -208,9 +236,7 @@ class _PlayerPageState extends State<PlayerPage> {
             appBar: AppBar(
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+                onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back_ios),
                 color: Colors.white,
               ),
@@ -240,7 +266,53 @@ class _PlayerPageState extends State<PlayerPage> {
             ),
             body: Column(
               children: [
-                player,
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      player,
+                      Positioned.fill(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onDoubleTap: _skipBackward,
+                                child: Container(),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onDoubleTap: _skipForward,
+                                child: Container(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_showBackward)
+                        const Positioned(
+                          left: 50,
+                          child: Icon(
+                            Icons.replay_10,
+                            size: 80,
+                            color: Colors.white,
+                          ),
+                        ),
+                      if (_showForward)
+                        const Positioned(
+                          right: 50,
+                          child: Icon(
+                            Icons.forward_10,
+                            size: 80,
+                            color: Colors.white,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
                 Expanded(child: _buildVideoList()),
               ],
             ),
@@ -252,37 +324,70 @@ class _PlayerPageState extends State<PlayerPage> {
             bottom: 0,
             right: 0,
             child: AnimatedContainer(
-              duration: Duration(milliseconds: 500),
+              duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
               width: _showList ? MediaQuery.of(context).size.width * 0.25 : 0,
               height: MediaQuery.of(context).size.height,
               child: Material(
                 color: Colors.white,
                 child: Container(
-                    color: Colors.green[800],
-                    child: _buildVideoListToFullscren()),
+                  color: Colors.green[800],
+                  child: _buildVideoListToFullscren(),
+                ),
               ),
             ),
           ),
-
-        // Overlay para capturar o tap
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onDoubleTap: () {
-              setState(() {
-                _showList = !_showList;
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                scrollToIndex(_currentIndex, itemHeight: 116.0);
-              });
-            },
+        if (isFullScreen) ...[
+          Positioned.fill(
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onDoubleTap: _skipBackward,
+                    child: Container(),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onDoubleTap: _skipForward,
+                    child: Container(),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          if (_showBackward)
+            Positioned.fill(
+              left: 120,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Icon(
+                  Icons.replay_10,
+                  size: 80,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          if (_showForward)
+            Positioned.fill(
+              right: 120,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Icon(
+                  Icons.forward_10,
+                  size: 80,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ]
       ],
     );
   }
 
+  // ======== Video Listas ========
   Widget _buildVideoListToFullscren() {
     final firebaseVideoListProvider =
         Provider.of<FirebaseVideoListProvider>(context, listen: false);
@@ -293,7 +398,6 @@ class _PlayerPageState extends State<PlayerPage> {
       onReorder: (oldIndex, newIndex) {
         setState(() {
           if (newIndex > oldIndex) newIndex -= 1;
-
           final video = widget.videos.removeAt(oldIndex);
           widget.videos.insert(newIndex, video);
 
@@ -305,7 +409,6 @@ class _PlayerPageState extends State<PlayerPage> {
             _currentIndex += 1;
           }
 
-          // Também reordena as keys para manter sincronização
           final key = _itemKeys.removeAt(oldIndex);
           _itemKeys.insert(newIndex, key);
 
@@ -321,14 +424,13 @@ class _PlayerPageState extends State<PlayerPage> {
         final isPlaying = index == _currentIndex;
 
         return KeyedSubtree(
-          key: _itemKeys[index], // usa as keys sincronizadas
+          key: _itemKeys[index],
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, animation) {
-              final offsetAnimation = Tween<Offset>(
-                begin: const Offset(0.1, 0),
-                end: Offset.zero,
-              ).animate(animation);
+              final offsetAnimation =
+                  Tween<Offset>(begin: const Offset(0.1, 0), end: Offset.zero)
+                      .animate(animation);
               return SlideTransition(
                 position: offsetAnimation,
                 child: FadeTransition(opacity: animation, child: child),
@@ -336,9 +438,7 @@ class _PlayerPageState extends State<PlayerPage> {
             },
             child: InkWell(
               onTap: () {
-                if (!isPlaying) {
-                  _playVideo(index);
-                }
+                if (!isPlaying) _playVideo(index);
               },
               child: Container(
                 padding: const EdgeInsets.all(8),
@@ -350,7 +450,6 @@ class _PlayerPageState extends State<PlayerPage> {
                 ),
                 child: Row(
                   children: [
-                    // Drag handle para reorder
                     ReorderableDragStartListener(
                       index: index,
                       child: Icon(
@@ -408,7 +507,7 @@ class _PlayerPageState extends State<PlayerPage> {
       padding: const EdgeInsets.only(bottom: 60),
       scrollController: _scrollController,
       buildDefaultDragHandles: false,
-      onReorder: (oldIndex, newIndex) async {
+      onReorder: (oldIndex, newIndex) {
         setState(() {
           if (newIndex > oldIndex) newIndex -= 1;
           final video = widget.videos.removeAt(oldIndex);
@@ -422,7 +521,6 @@ class _PlayerPageState extends State<PlayerPage> {
             _currentIndex += 1;
           }
 
-          // reordena também as keys
           final key = _itemKeys.removeAt(oldIndex);
           _itemKeys.insert(newIndex, key);
         });
@@ -436,10 +534,7 @@ class _PlayerPageState extends State<PlayerPage> {
           child: Container(
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey.shade400,
-                  width: 0.5,
-                ),
+                bottom: BorderSide(color: Colors.grey.shade400, width: 0.5),
               ),
             ),
             child: ListTile(
@@ -461,7 +556,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     const SizedBox(width: 5),
                     SizedBox(
                       height: 60,
-                      width: 100, // 🔑 define largura para o thumbnail
+                      width: 100,
                       child: Stack(
                         children: [
                           ClipRRect(
@@ -509,9 +604,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 ),
               ),
               onTap: () {
-                if (_currentIndex != index) {
-                  _playVideo(index);
-                }
+                if (_currentIndex != index) _playVideo(index);
               },
             ),
           ),
