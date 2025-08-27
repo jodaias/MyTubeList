@@ -34,6 +34,10 @@ class _PlayerPageState extends State<PlayerPage> {
   bool _showForward = false;
   bool _showBackward = false;
 
+  // Variáveis para controle do gesto
+  double _dragStartX = 0.0;
+  double _dragUpdateX = 0.0;
+
   @override
   void initState() {
     super.initState();
@@ -318,7 +322,7 @@ class _PlayerPageState extends State<PlayerPage> {
             ),
           ),
         ),
-        if (isLandscape)
+        if (isLandscape) ...[
           Positioned(
             top: 0,
             bottom: 0,
@@ -337,6 +341,42 @@ class _PlayerPageState extends State<PlayerPage> {
               ),
             ),
           ),
+          // Overlay para capturar o Drag
+          Positioned.fill(
+            child: GestureDetector(
+              onHorizontalDragStart: (details) {
+                // Guarda a posição inicial do toque
+                _dragStartX = details.globalPosition.dx;
+              },
+              onHorizontalDragUpdate: (details) {
+                // Atualiza a posição final
+                _dragUpdateX = details.globalPosition.dx;
+              },
+              onHorizontalDragEnd: (details) {
+                final screenWidth = MediaQuery.of(context).size.width;
+
+                // Se arrastou da direita (últimos 20% da tela) para o centro → abre
+                if (_dragStartX > screenWidth * 0.8 &&
+                    _dragUpdateX < _dragStartX) {
+                  setState(() {
+                    _showList = true;
+                  });
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    scrollToIndex(_currentIndex, itemHeight: 116.0);
+                  });
+                }
+
+                // Se arrastou do centro para a direita → fecha
+                else if (_dragStartX < screenWidth * 0.8 &&
+                    _dragUpdateX > _dragStartX) {
+                  setState(() {
+                    _showList = false;
+                  });
+                }
+              },
+            ),
+          ),
+        ],
         if (isFullScreen) ...[
           Positioned.fill(
             child: Row(

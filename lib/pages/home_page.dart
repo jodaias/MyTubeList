@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
 import '../utils/confirmation_modal.dart';
@@ -623,7 +625,7 @@ class _HomePageState extends State<HomePage> {
             Text('Vídeos: ${list.videos.length}'),
             const SizedBox(height: 16),
             const Text(
-              'Funcionalidade de compartilhamento será implementada em breve!',
+              'Você pode compartilhar esta lista com seus amigos!',
               style: TextStyle(fontStyle: FontStyle.italic),
             ),
           ],
@@ -632,6 +634,25 @@ class _HomePageState extends State<HomePage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Fechar'),
+          ),
+          TextButton(
+            onPressed: () {
+              final videoLinks = list.videos
+                  .map((v) =>
+                      '${v.title} - https://www.youtube.com/watch?v=${v.id}')
+                  .join('\n');
+              final shareText =
+                  'Confira minha lista "${list.name}":\n$videoLinks';
+
+              final shareParams = ShareParams(
+                text: shareText,
+                subject: 'Compartilhar Lista de Vídeos',
+              );
+
+              SharePlus.instance.share(shareParams);
+              Navigator.pop(context);
+            },
+            child: const Text('Compartilhar'),
           ),
         ],
       ),
