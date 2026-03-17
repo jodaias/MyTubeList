@@ -8,6 +8,7 @@ class VideoCard extends StatelessWidget {
   final Future<void> Function()? onDeleteConfirmed;
   final Future<void> Function()? onAddConfirmed;
   final Future<void> Function()? onRemoveConfirmed;
+  final VoidCallback? onPreview;
   final bool isAdded;
   final bool showPlayButton;
   final bool? isSelected; // Nova propriedade para seleção
@@ -23,6 +24,7 @@ class VideoCard extends StatelessWidget {
     this.onAddConfirmed = null,
     this.onDeleteConfirmed = null,
     this.onRemoveConfirmed = null,
+    this.onPreview,
     Key? key,
   }) : super(key: key);
 
@@ -69,6 +71,33 @@ class VideoCard extends StatelessWidget {
                             ),
                             onPressed: onTap,
                             splashRadius: 25,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Botão de preview (play) no canto inferior esquerdo
+                  if (onPreview != null)
+                    Positioned(
+                      bottom: 4,
+                      left: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: onPreview,
+                          splashRadius: 15,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
                           ),
                         ),
                       ),

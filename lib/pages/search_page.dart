@@ -379,6 +379,17 @@ class _SearchPageState extends State<SearchPage> {
                             video: video,
                             isSelected: isSelected,
                             onTap: () => _toggleVideoSelection(video.id),
+                            onPreview: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/player',
+                                arguments: {
+                                  'listId': widget.listId,
+                                  'videos': [video],
+                                  'currentIndex': 0,
+                                },
+                              );
+                            },
                           );
                         },
                       ),
