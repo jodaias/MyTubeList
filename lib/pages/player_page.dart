@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_video_list_provider.dart';
+import 'package:screen_brightness/screen_brightness.dart';
+import 'package:volume_controller/volume_controller.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+
+enum _VerticalGestureSide { left, right }
 
 class PlayerPage extends StatefulWidget {
   final List<VideoModel> videos;
@@ -23,6 +27,7 @@ class PlayerPage extends StatefulWidget {
 class _PlayerPageState extends State<PlayerPage> {
   late YoutubePlayerController _controller;
   final ScrollController _scrollController = ScrollController();
+  final VolumeController _volumeController = VolumeController.instance;
   late int _currentIndex;
   bool _showList = false;
   bool _repeat = false;
@@ -37,6 +42,17 @@ class _PlayerPageState extends State<PlayerPage> {
   // Variáveis para controle do gesto
   double _dragStartX = 0.0;
   double _dragUpdateX = 0.0;
+
+  double _currentBrightness = 0.5;
+  double _currentVolume = 0.5;
+  double _gestureStartY = 0.0;
+  double _gestureStartBrightness = 0.5;
+  double _gestureStartVolume = 0.5;
+  _VerticalGestureSide? _activeVerticalGestureSide;
+  String _gestureLabel = '';
+  double _gestureValue = 0.0;
+  bool _showGestureFeedback = false;
+  int _gestureFeedbackVersion = 0;
 
   @override
   void initState() {
@@ -56,6 +72,138 @@ class _PlayerPageState extends State<PlayerPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollToIndex(_currentIndex);
     });
+
+    _initializeSystemControls();
+  }
+
+  Future<void> _initializeSystemControls() async {
+    try {
+      _volumeController.showSystemUI = false;
+
+      final brightness = await ScreenBrightness().application;
+      final volume = await _volumeController.getVolume();
+
+      if (!mounted) return;
+      setState(() {
+        _currentBrightness = brightness.clamp(0.0, 1.0);
+        _currentVolume = volume.clamp(0.0, 1.0);
+      });
+    } catch (_) {
+      // Mantem valores padrao caso o dispositivo nao permita leitura.
+    }
+  }
+
+  void _onVerticalDragStart(
+      DragStartDetails details, _VerticalGestureSide side) {
+    _activeVerticalGestureSide = side;
+    _gestureStartY = details.globalPosition.dy;
+    _gestureStartBrightness = _currentBrightness;
+    _gestureStartVolume = _currentVolume;
+  }
+
+  Future<void> _onVerticalDragUpdate(DragUpdateDetails details) async {
+    if (_activeVerticalGestureSide == null) return;
+
+    final screenHeight = MediaQuery.of(context).size.height;
+    final normalizedDelta =
+        (_gestureStartY - details.globalPosition.dy) / screenHeight;
+    final scaledDelta = normalizedDelta * 1.5;
+
+    if (_activeVerticalGestureSide == _VerticalGestureSide.left) {
+      final newBrightness =
+          (_gestureStartBrightness + scaledDelta).clamp(0.0, 1.0);
+      _currentBrightness = newBrightness;
+      try {
+        await ScreenBrightness().setApplicationScreenBrightness(newBrightness);
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _gestureLabel = 'Brilho';
+        _gestureValue = newBrightness;
+        _showGestureFeedback = true;
+      });
+      return;
+    }
+
+    final newVolume = (_gestureStartVolume + scaledDelta).clamp(0.0, 1.0);
+    _currentVolume = newVolume;
+    await _volumeController.setVolume(newVolume);
+
+    if (!mounted) return;
+    setState(() {
+      _gestureLabel = 'Volume';
+      _gestureValue = newVolume;
+      _showGestureFeedback = true;
+    });
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    _activeVerticalGestureSide = null;
+    final localVersion = ++_gestureFeedbackVersion;
+
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (!mounted || localVersion != _gestureFeedbackVersion) return;
+      setState(() {
+        _showGestureFeedback = false;
+      });
+    });
+  }
+
+  Widget _buildPlayerGestureLayer() {
+    return Positioned.fill(
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTap: _skipBackward,
+              onVerticalDragStart: (details) =>
+                  _onVerticalDragStart(details, _VerticalGestureSide.left),
+              onVerticalDragUpdate: _onVerticalDragUpdate,
+              onVerticalDragEnd: _onVerticalDragEnd,
+              child: Container(),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onDoubleTap: _skipForward,
+              onVerticalDragStart: (details) =>
+                  _onVerticalDragStart(details, _VerticalGestureSide.right),
+              onVerticalDragUpdate: _onVerticalDragUpdate,
+              onVerticalDragEnd: _onVerticalDragEnd,
+              child: Container(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGestureFeedback() {
+    final percent = (_gestureValue * 100).round();
+    final icon =
+        _gestureLabel == 'Volume' ? Icons.volume_up : Icons.brightness_6;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(
+            '$_gestureLabel $percent%',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 
   void _setupController() {
@@ -276,26 +424,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     alignment: Alignment.center,
                     children: [
                       player,
-                      Positioned.fill(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onDoubleTap: _skipBackward,
-                                child: Container(),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onDoubleTap: _skipForward,
-                                child: Container(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _buildPlayerGestureLayer(),
                       if (_showBackward)
                         const Positioned(
                           left: 50,
@@ -312,6 +441,13 @@ class _PlayerPageState extends State<PlayerPage> {
                             Icons.forward_10,
                             size: 80,
                             color: Colors.white,
+                          ),
+                        ),
+                      if (_showGestureFeedback)
+                        Positioned.fill(
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: _buildGestureFeedback(),
                           ),
                         ),
                     ],
@@ -378,26 +514,7 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
         ],
         if (isFullScreen) ...[
-          Positioned.fill(
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onDoubleTap: _skipBackward,
-                    child: Container(),
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onDoubleTap: _skipForward,
-                    child: Container(),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildPlayerGestureLayer(),
           if (_showBackward)
             Positioned.fill(
               left: 120,
@@ -420,6 +537,13 @@ class _PlayerPageState extends State<PlayerPage> {
                   size: 80,
                   color: Colors.white,
                 ),
+              ),
+            ),
+          if (_showGestureFeedback)
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment.center,
+                child: _buildGestureFeedback(),
               ),
             ),
         ]
