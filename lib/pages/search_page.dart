@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
@@ -26,6 +27,9 @@ class _SearchPageState extends State<SearchPage> {
   bool _hasSearched = false;
   bool _hasValidated = false; // Nova variável para controlar validação
   bool _isSaving = false; // Novo estado para loading dos botões
+  YoutubePlayerController? _previewController;
+  String? _previewVideoTitle;
+  String? _previewVideoId;
 
   @override
   void initState() {
@@ -207,6 +211,34 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  void _previewVideo(VideoModel video) {
+    _previewController?.pause();
+    _previewController?.dispose();
+
+    final controller = YoutubePlayerController(
+      initialVideoId: video.id,
+      flags: const YoutubePlayerFlags(
+        autoPlay: true,
+        mute: false,
+      ),
+    );
+
+    setState(() {
+      _previewController = controller;
+      _previewVideoTitle = video.title;
+      _previewVideoId = video.id;
+    });
+  }
+
+  void _closePreview() {
+    _previewController?.dispose();
+    setState(() {
+      _previewController = null;
+      _previewVideoTitle = null;
+      _previewVideoId = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final firebaseVideoProvider = context.watch<FirebaseVideoProvider>();
@@ -354,6 +386,49 @@ class _SearchPageState extends State<SearchPage> {
                 ],
               ),
             ),
+          if (_previewController != null)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _previewVideoTitle ?? 'Pré-visualização',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: _closePreview,
+                        tooltip: 'Fechar pré-visualização',
+                      ),
+                    ],
+                  ),
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: YoutubePlayer(
+                        key: ValueKey(_previewVideoId),
+                        controller: _previewController!,
+                        showVideoProgressIndicator: true,
+                        progressIndicatorColor: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -379,17 +454,7 @@ class _SearchPageState extends State<SearchPage> {
                             video: video,
                             isSelected: isSelected,
                             onTap: () => _toggleVideoSelection(video.id),
-                            onPreview: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/player',
-                                arguments: {
-                                  'listId': widget.listId,
-                                  'videos': [video],
-                                  'currentIndex': 0,
-                                },
-                              );
-                            },
+                            onPreview: () => _previewVideo(video),
                           );
                         },
                       ),
@@ -401,6 +466,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
+    _previewController?.dispose();
     _searchController.dispose();
     super.dispose();
   }
