@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_video_list_provider.dart';
@@ -32,6 +33,8 @@ class _PlayerPageState extends State<PlayerPage> {
   bool _showList = false;
   bool _repeat = false;
   bool isFullScreen = false;
+  bool _isScreenLocked = false;
+  bool _showUnlockButton = false;
   bool _currentStatusPlaying = true;
   late List<GlobalKey> _itemKeys;
 
@@ -49,14 +52,17 @@ class _PlayerPageState extends State<PlayerPage> {
   double _gestureStartBrightness = 0.5;
   double _gestureStartVolume = 0.5;
   _VerticalGestureSide? _activeVerticalGestureSide;
+  _VerticalGestureSide _lastGestureSide = _VerticalGestureSide.left;
   String _gestureLabel = '';
   double _gestureValue = 0.0;
   bool _showGestureFeedback = false;
   int _gestureFeedbackVersion = 0;
+  int _unlockUiVersion = 0;
 
   @override
   void initState() {
     super.initState();
+    _setPlayerOrientations();
     _currentIndex = widget.currentIndex;
     _setupController();
 
@@ -74,6 +80,20 @@ class _PlayerPageState extends State<PlayerPage> {
     });
 
     _initializeSystemControls();
+  }
+
+  Future<void> _setPlayerOrientations() {
+    return SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  Future<void> _setPortraitOnlyOrientation() {
+    return SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
   }
 
   Future<void> _initializeSystemControls() async {
@@ -95,14 +115,23 @@ class _PlayerPageState extends State<PlayerPage> {
 
   void _onVerticalDragStart(
       DragStartDetails details, _VerticalGestureSide side) {
+    if (isFullScreen && _isScreenLocked) return;
+
+    // Brilho e volume por gesto vertical funcionam apenas em tela cheia.
+    if (!isFullScreen) return;
+
     _activeVerticalGestureSide = side;
+    _lastGestureSide = side;
     _gestureStartY = details.globalPosition.dy;
     _gestureStartBrightness = _currentBrightness;
     _gestureStartVolume = _currentVolume;
   }
 
   Future<void> _onVerticalDragUpdate(DragUpdateDetails details) async {
+    if (isFullScreen && _isScreenLocked) return;
     if (_activeVerticalGestureSide == null) return;
+
+    if (!isFullScreen) return;
 
     final screenHeight = MediaQuery.of(context).size.height;
     final normalizedDelta =
@@ -139,6 +168,7 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
+    if (isFullScreen && _isScreenLocked) return;
     _activeVerticalGestureSide = null;
     final localVersion = ++_gestureFeedbackVersion;
 
@@ -185,25 +215,156 @@ class _PlayerPageState extends State<PlayerPage> {
     final percent = (_gestureValue * 100).round();
     final icon =
         _gestureLabel == 'Volume' ? Icons.volume_up : Icons.brightness_6;
+    const barHeight = 92.0;
+    final filledHeight =
+        (_gestureValue * barHeight).clamp(0.0, barHeight).toDouble();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      width: 56,
+      height: 172,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.black.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(
-            '$_gestureLabel $percent%',
-            style: const TextStyle(color: Colors.white),
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(height: 8),
+          Container(
+            width: 8,
+            height: barHeight,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.24),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 90),
+                curve: Curves.easeOut,
+                width: 8,
+                height: filledHeight,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          SizedBox(
+            width: 34,
+            height: 16,
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('$percent%',
+                    textScaler: TextScaler.noScaling,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    )),
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildGestureFeedbackOverlay() {
+    final side = _activeVerticalGestureSide ?? _lastGestureSide;
+    final alignment = side == _VerticalGestureSide.left
+        ? Alignment.centerLeft
+        : Alignment.centerRight;
+    final edgeInset = MediaQuery.of(context).padding.horizontal / 2 + 100;
+
+    return Positioned.fill(
+      child: Align(
+        alignment: alignment,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: edgeInset),
+          child: _buildGestureFeedback(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFullscreenLockButton({required bool locked}) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.48),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
+          child: Icon(
+            locked ? Icons.lock : Icons.lock_open,
+            key: ValueKey<bool>(locked),
+          ),
+        ),
+        color: Colors.white,
+        iconSize: 20,
+        padding: EdgeInsets.zero,
+        tooltip: locked ? 'Desbloquear tela' : 'Bloquear tela',
+        onPressed: () {
+          setState(() {
+            _isScreenLocked = !locked;
+            _showUnlockButton = true;
+            if (_isScreenLocked) {
+              _showList = false;
+              _showForward = false;
+              _showBackward = false;
+              _showGestureFeedback = false;
+            }
+          });
+
+          _showUnlockButtonTemporarily();
+        },
+      ),
+    );
+  }
+
+  void _showUnlockButtonTemporarily() {
+    if (!isFullScreen) return;
+    final localVersion = ++_unlockUiVersion;
+
+    setState(() {
+      _showUnlockButton = true;
+    });
+
+    Future.delayed(const Duration(seconds: 5), () {
+      if (!mounted || localVersion != _unlockUiVersion || !isFullScreen) {
+        return;
+      }
+
+      setState(() {
+        _showUnlockButton = false;
+      });
+    });
+  }
+
+  void _toggleUnlockButtonVisibility() {
+    if (!isFullScreen) return;
+
+    if (_showUnlockButton) {
+      _unlockUiVersion++;
+      setState(() {
+        _showUnlockButton = false;
+      });
+      return;
+    }
+
+    _showUnlockButtonTemporarily();
   }
 
   void _setupController() {
@@ -285,6 +446,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    _setPortraitOnlyOrientation();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -302,6 +464,8 @@ class _PlayerPageState extends State<PlayerPage> {
             setState(() {
               _showList = false;
               isFullScreen = false;
+              _isScreenLocked = false;
+              _showUnlockButton = false;
             });
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -311,7 +475,11 @@ class _PlayerPageState extends State<PlayerPage> {
           onEnterFullScreen: () {
             setState(() {
               isFullScreen = true;
+              _isScreenLocked = false;
+              _showUnlockButton = true;
             });
+
+            _showUnlockButtonTemporarily();
           },
           player: YoutubePlayer(
             controller: _controller,
@@ -331,6 +499,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           shape: const CircleBorder(),
                         ),
                         onPressed: () {
+                          if (_isScreenLocked) return;
                           setState(() => _showList = !_showList);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             scrollToIndex(_currentIndex, itemHeight: 116.0);
@@ -412,7 +581,10 @@ class _PlayerPageState extends State<PlayerPage> {
                       _showList ? Icons.close : Icons.playlist_play,
                       color: Colors.white,
                     ),
-                    onPressed: () => setState(() => _showList = !_showList),
+                    onPressed: () {
+                      if (_isScreenLocked) return;
+                      setState(() => _showList = !_showList);
+                    },
                   ),
               ],
             ),
@@ -424,8 +596,8 @@ class _PlayerPageState extends State<PlayerPage> {
                     alignment: Alignment.center,
                     children: [
                       player,
-                      _buildPlayerGestureLayer(),
-                      if (_showBackward)
+                      if (!isFullScreen) _buildPlayerGestureLayer(),
+                      if (!isFullScreen && _showBackward)
                         const Positioned(
                           left: 50,
                           child: Icon(
@@ -434,7 +606,7 @@ class _PlayerPageState extends State<PlayerPage> {
                             color: Colors.white,
                           ),
                         ),
-                      if (_showForward)
+                      if (!isFullScreen && _showForward)
                         const Positioned(
                           right: 50,
                           child: Icon(
@@ -443,13 +615,8 @@ class _PlayerPageState extends State<PlayerPage> {
                             color: Colors.white,
                           ),
                         ),
-                      if (_showGestureFeedback)
-                        Positioned.fill(
-                          child: Align(
-                            alignment: Alignment.center,
-                            child: _buildGestureFeedback(),
-                          ),
-                        ),
+                      if (!isFullScreen && _showGestureFeedback)
+                        _buildGestureFeedbackOverlay(),
                     ],
                   ),
                 ),
@@ -466,7 +633,9 @@ class _PlayerPageState extends State<PlayerPage> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 500),
               curve: Curves.easeInOut,
-              width: _showList ? MediaQuery.of(context).size.width * 0.25 : 0,
+              width: (_showList && !_isScreenLocked)
+                  ? MediaQuery.of(context).size.width * 0.25
+                  : 0,
               height: MediaQuery.of(context).size.height,
               child: Material(
                 color: Colors.white,
@@ -481,14 +650,17 @@ class _PlayerPageState extends State<PlayerPage> {
           Positioned.fill(
             child: GestureDetector(
               onHorizontalDragStart: (details) {
+                if (isFullScreen && _isScreenLocked) return;
                 // Guarda a posição inicial do toque
                 _dragStartX = details.globalPosition.dx;
               },
               onHorizontalDragUpdate: (details) {
+                if (isFullScreen && _isScreenLocked) return;
                 // Atualiza a posição final
                 _dragUpdateX = details.globalPosition.dx;
               },
               onHorizontalDragEnd: (details) {
+                if (isFullScreen && _isScreenLocked) return;
                 final screenWidth = MediaQuery.of(context).size.width;
 
                 // Se arrastou da direita (últimos 20% da tela) para o centro → abre
@@ -514,8 +686,15 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
         ],
         if (isFullScreen) ...[
-          _buildPlayerGestureLayer(),
-          if (_showBackward)
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) => _toggleUnlockButtonVisibility(),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          if (!_isScreenLocked) _buildPlayerGestureLayer(),
+          if (!_isScreenLocked && _showBackward)
             Positioned.fill(
               left: 120,
               child: Align(
@@ -527,7 +706,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 ),
               ),
             ),
-          if (_showForward)
+          if (!_isScreenLocked && _showForward)
             Positioned.fill(
               right: 120,
               child: Align(
@@ -539,11 +718,49 @@ class _PlayerPageState extends State<PlayerPage> {
                 ),
               ),
             ),
-          if (_showGestureFeedback)
+          if (!_isScreenLocked && _showGestureFeedback)
+            _buildGestureFeedbackOverlay(),
+          if (_isScreenLocked)
             Positioned.fill(
-              child: Align(
-                alignment: Alignment.center,
-                child: _buildGestureFeedback(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _toggleUnlockButtonVisibility,
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          if (isFullScreen)
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: !_showUnlockButton,
+                child: AnimatedOpacity(
+                  opacity: _showUnlockButton ? 1 : 0,
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOut,
+                  child: AnimatedSlide(
+                    offset: _showUnlockButton
+                        ? Offset.zero
+                        : (_isScreenLocked
+                            ? const Offset(0, 0.08)
+                            : const Offset(-0.1, 0)),
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOut,
+                    child: Align(
+                      alignment: _isScreenLocked
+                          ? const Alignment(0, 0.5)
+                          : Alignment.topLeft,
+                      child: Padding(
+                        padding: _isScreenLocked
+                            ? EdgeInsets.zero
+                            : EdgeInsets.only(
+                                left: 12,
+                                top: MediaQuery.of(context).padding.top + 62,
+                              ),
+                        child:
+                            _buildFullscreenLockButton(locked: _isScreenLocked),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
         ]
