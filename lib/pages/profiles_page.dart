@@ -73,16 +73,17 @@ class _ProfilesPageState extends State<ProfilesPage>
   }
 
   void _showLoginModal(BuildContext context) {
+    final pageContext = context;
     final usernameController = TextEditingController();
     final passwordController = TextEditingController();
     bool isPasswordVisible = false;
     bool isLoading = false;
 
     showDialog(
-      context: context,
+      context: pageContext,
       barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
           title: const Text('Adicionar Perfil Existente'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -158,7 +159,7 @@ class _ProfilesPageState extends State<ProfilesPage>
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(context),
+              onPressed: isLoading ? null : () => Navigator.pop(dialogContext),
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
@@ -199,14 +200,15 @@ class _ProfilesPageState extends State<ProfilesPage>
                             await localProfilesProvider.addProfile(profile);
 
                             // Só fechar o modal após tudo estar pronto
-                            Navigator.pop(context);
+                            Navigator.pop(dialogContext);
 
-                            // Mostrar sucesso
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Perfil adicionado com sucesso!'),
-                                backgroundColor: Colors.green,
-                              ),
+                            if (!mounted) return;
+
+                            // Redirecionar direto para o dashboard
+                            Navigator.pushNamedAndRemoveUntil(
+                              pageContext,
+                              '/home',
+                              (_) => false,
                             );
                           } else {
                             throw Exception('Perfil não encontrado');
@@ -219,7 +221,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                           isLoading = false;
                         });
 
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(dialogContext).showSnackBar(
                           SnackBar(
                             content: Text('Erro: ${e.toString()}'),
                             backgroundColor: Colors.red,
@@ -459,7 +461,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                       labelText: 'Categoria',
                       hintText: 'Selecione a categoria do perfil',
                     ),
-                    value: selectedCategory,
+                    initialValue: selectedCategory,
                     items: UserCategory.values
                         .map((category) => DropdownMenuItem(
                               value: category,
@@ -894,11 +896,23 @@ class _ProfilesPageState extends State<ProfilesPage>
                                               ),
                                               onSelected: (value) async {
                                                 if (value == 'remove_local') {
+                                                  final confirm =
+                                                      await showConfirmationDialog(
+                                                    context,
+                                                    title:
+                                                        'Remover perfil local',
+                                                    content:
+                                                        'Tem certeza que deseja remover este perfil apenas deste dispositivo?',
+                                                    confirmText: 'Remover',
+                                                    cancelText: 'Cancelar',
+                                                  );
+                                                  if (!confirm) return;
+
                                                   final canRemove =
                                                       await showMathConfirmationModal(
                                                     context,
-                                                    "Remover perfil local?",
-                                                    "Remover",
+                                                    'Confirmação extra',
+                                                    'Remover',
                                                     userCategory:
                                                         profile.category,
                                                   );
