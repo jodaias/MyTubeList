@@ -9,6 +9,7 @@ import '../utils/confirmation_modal.dart';
 import '../models/video_list_model.dart';
 import '../models/profile_model.dart';
 import '../widgets/empty_state_widget.dart';
+import '../widgets/ad_banner_widget.dart';
 import '../utils/error_listener.dart';
 
 class HomePage extends StatefulWidget {
@@ -357,6 +358,7 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: Colors.green[700],
           child: const Icon(Icons.add, color: Colors.white),
         ),
+        bottomNavigationBar: const AdBannerWidget(),
       ),
     );
   }

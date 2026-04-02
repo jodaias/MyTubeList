@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_tube_list/models/video_list_model.dart';
 import 'package:my_tube_list/pages/videos_page.dart';
@@ -32,6 +33,8 @@ void main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
+
+  await MobileAds.instance.initialize();
 
   // Carregar variáveis de ambiente
   await dotenv.load(fileName: ".env");
