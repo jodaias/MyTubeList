@@ -127,15 +127,6 @@ class FirebaseProfileProvider extends ChangeNotifier {
     }
   }
 
-  /// 📋 Buscar todos os perfis do Firebase
-  Future<List<ProfileModel>> getAllProfiles() async {
-    try {
-      return await _firebaseService.getAllProfiles();
-    } catch (e) {
-      return [];
-    }
-  }
-
   /// 🚪 Fazer logout
   Future<void> signOut() async {
     try {

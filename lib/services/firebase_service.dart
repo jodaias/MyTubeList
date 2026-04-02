@@ -148,34 +148,6 @@ class FirebaseService {
     }
   }
 
-  /// 📋 Buscar todos os perfis do Firebase
-  Future<List<ProfileModel>> getAllProfiles() async {
-    try {
-      final querySnapshot = await _firestore.collection('users').get();
-
-      final profiles = <ProfileModel>[];
-
-      for (final doc in querySnapshot.docs) {
-        final data = doc.data();
-        if (data.containsKey('profile')) {
-          final profileData = data['profile'] as Map<String, dynamic>;
-
-          profiles.add(ProfileModel(
-            id: profileData['id'],
-            name: profileData['name'],
-            username: profileData['username'],
-            category: _parseCategory(profileData['category']),
-            email: profileData['email'],
-          ));
-        }
-      }
-
-      return profiles;
-    } catch (e) {
-      return [];
-    }
-  }
-
   /// 🚪 Fazer logout
   Future<void> signOut() async {
     try {
