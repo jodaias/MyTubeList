@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import '../constants/app_constants.dart';
 import '../models/profile_model.dart';
 import '../models/video_list_model.dart';
 import '../models/video_model.dart';
@@ -353,7 +354,7 @@ class FirebaseService {
       final querySnapshot =
           await _userSearchHistoryTermsCollection(user.uid, profileId, listId)
               .orderBy('searchedAt', descending: true)
-              .limit(5)
+              .limit(AppConstants.maxSearchHistory)
               .get();
 
       return querySnapshot.docs.map((doc) {

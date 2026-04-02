@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_constants.dart';
 import '../providers/firebase_video_list_provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../utils/confirmation_modal.dart';
@@ -123,6 +124,7 @@ class _VideosPageState extends State<VideosPage> {
           if (!_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.play_arrow, color: Colors.white),
+              tooltip: 'Reproduzir lista',
               onPressed: () {
                 if (videoList.videos.isNotEmpty) {
                   Navigator.pushNamed(
@@ -141,6 +143,7 @@ class _VideosPageState extends State<VideosPage> {
           if (!_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.add, color: Colors.white),
+              tooltip: 'Adicionar vídeos',
               onPressed: () {
                 Navigator.pushNamed(
                   context,
@@ -192,10 +195,10 @@ class _VideosPageState extends State<VideosPage> {
           : GridView.builder(
               padding: const EdgeInsets.all(8),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.1,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisCount: AppConstants.gridCrossAxisCount,
+                childAspectRatio: AppConstants.gridChildAspectRatio,
+                crossAxisSpacing: AppConstants.gridSpacing,
+                mainAxisSpacing: AppConstants.gridSpacing,
               ),
               itemCount: videoList.videos.length,
               itemBuilder: (context, index) {

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/profile_model.dart';
 import '../services/firebase_service.dart';
+import '../di/service_locator.dart';
 
 class FirebaseProfileProvider extends ChangeNotifier {
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = getIt<FirebaseService>();
 
   ProfileModel? _currentProfile;
   bool _isLoading = false;

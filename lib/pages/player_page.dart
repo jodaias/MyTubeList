@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_video_list_provider.dart';
 import 'package:screen_brightness/screen_brightness.dart';
@@ -219,7 +220,7 @@ class _PlayerPageState extends State<PlayerPage> {
     final percent = (_gestureValue * 100).round();
     final icon =
         _gestureLabel == 'Volume' ? Icons.volume_up : Icons.brightness_6;
-    const barHeight = 92.0;
+    const barHeight = AppConstants.gestureFeedbackBarHeight;
     final filledHeight =
         (_gestureValue * barHeight).clamp(0.0, barHeight).toDouble();
 
@@ -246,7 +247,7 @@ class _PlayerPageState extends State<PlayerPage> {
             child: Align(
               alignment: Alignment.bottomCenter,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 90),
+                duration: AppConstants.gestureFeedbackAnimation,
                 curve: Curves.easeOut,
                 width: 8,
                 height: filledHeight,
@@ -259,8 +260,8 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
           const SizedBox(height: 5),
           SizedBox(
-            width: 34,
-            height: 16,
+            width: AppConstants.percentTextWidth,
+            height: AppConstants.percentTextHeight,
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
@@ -300,15 +301,15 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Widget _buildFullscreenLockButton({required bool locked}) {
     return Container(
-      width: 42,
-      height: 42,
+      width: AppConstants.lockButtonSize,
+      height: AppConstants.lockButtonSize,
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.48),
         shape: BoxShape.circle,
       ),
       child: IconButton(
         icon: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
+          duration: AppConstants.lockButtonAnimation,
           transitionBuilder: (child, animation) =>
               FadeTransition(opacity: animation, child: child),
           child: Icon(
@@ -346,7 +347,7 @@ class _PlayerPageState extends State<PlayerPage> {
       _showUnlockButton = true;
     });
 
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(AppConstants.unlockButtonTimeout, () {
       if (!mounted || localVersion != _unlockUiVersion || !isFullScreen) {
         return;
       }
@@ -389,7 +390,8 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Future<void> scrollToIndex(int index, {double itemHeight = 76}) async {
+  Future<void> scrollToIndex(int index,
+      {double itemHeight = AppConstants.portraitListItemHeight}) async {
     final offset = index * itemHeight;
 
     await _scrollController.animateTo(
@@ -398,7 +400,7 @@ class _PlayerPageState extends State<PlayerPage> {
       curve: Curves.easeInOut,
     );
 
-    Future.delayed(const Duration(milliseconds: 100), () {
+    Future.delayed(AppConstants.scrollPostFrameDelay, () {
       if (_itemKeys[index].currentContext != null) {
         Scrollable.ensureVisible(
           _itemKeys[index].currentContext!,
@@ -488,7 +490,7 @@ class _PlayerPageState extends State<PlayerPage> {
           player: YoutubePlayer(
             controller: _controller,
             showVideoProgressIndicator: true,
-            controlsTimeOut: const Duration(seconds: 5),
+            controlsTimeOut: AppConstants.playerControlsTimeout,
             progressIndicatorColor: Colors.blueAccent,
             topActions: [
               Expanded(
@@ -506,7 +508,9 @@ class _PlayerPageState extends State<PlayerPage> {
                           if (_isScreenLocked) return;
                           setState(() => _showList = !_showList);
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            scrollToIndex(_currentIndex, itemHeight: 116.0);
+                            scrollToIndex(_currentIndex,
+                                itemHeight:
+                                    AppConstants.fullscreenListItemHeight);
                           });
                         },
                         child: Icon(
@@ -539,6 +543,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   Icons.repeat_one,
                   color: _repeat ? Colors.greenAccent : Colors.white,
                 ),
+                tooltip: _repeat ? 'Desativar repetição' : 'Repetir vídeo',
                 onPressed: () {
                   setState(() => _repeat = !_repeat);
                 },
@@ -564,6 +569,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.arrow_back_ios),
                 color: Colors.white,
+                tooltip: 'Voltar',
               ),
               backgroundColor: Colors.green[700],
               centerTitle: true,
@@ -585,6 +591,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       _showList ? Icons.close : Icons.playlist_play,
                       color: Colors.white,
                     ),
+                    tooltip: _showList ? 'Fechar lista' : 'Mostrar lista',
                     onPressed: () {
                       if (_isScreenLocked) return;
                       setState(() => _showList = !_showList);
@@ -606,7 +613,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           left: 50,
                           child: Icon(
                             Icons.replay_10,
-                            size: 80,
+                            size: AppConstants.skipIconSize,
                             color: Colors.white,
                           ),
                         ),
@@ -615,7 +622,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           right: 50,
                           child: Icon(
                             Icons.forward_10,
-                            size: 80,
+                            size: AppConstants.skipIconSize,
                             color: Colors.white,
                           ),
                         ),
@@ -635,10 +642,11 @@ class _PlayerPageState extends State<PlayerPage> {
             bottom: 0,
             right: 0,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
+              duration: AppConstants.landscapeListAnimation,
               curve: Curves.easeInOut,
               width: (_showList && !_isScreenLocked)
-                  ? MediaQuery.of(context).size.width * 0.25
+                  ? MediaQuery.of(context).size.width *
+                      AppConstants.landscapeListWidthFraction
                   : 0,
               height: MediaQuery.of(context).size.height,
               child: Material(
@@ -668,18 +676,21 @@ class _PlayerPageState extends State<PlayerPage> {
                 final screenWidth = MediaQuery.of(context).size.width;
 
                 // Se arrastou da direita (últimos 20% da tela) para o centro → abre
-                if (_dragStartX > screenWidth * 0.8 &&
+                if (_dragStartX >
+                        screenWidth * AppConstants.dragThresholdFraction &&
                     _dragUpdateX < _dragStartX) {
                   setState(() {
                     _showList = true;
                   });
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    scrollToIndex(_currentIndex, itemHeight: 116.0);
+                    scrollToIndex(_currentIndex,
+                        itemHeight: AppConstants.fullscreenListItemHeight);
                   });
                 }
 
                 // Se arrastou do centro para a direita → fecha
-                else if (_dragStartX < screenWidth * 0.8 &&
+                else if (_dragStartX <
+                        screenWidth * AppConstants.dragThresholdFraction &&
                     _dragUpdateX > _dragStartX) {
                   setState(() {
                     _showList = false;

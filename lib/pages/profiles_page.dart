@@ -140,6 +140,8 @@ class _ProfilesPageState extends State<ProfilesPage>
                           : Icons.visibility_off,
                       color: Colors.grey[600],
                     ),
+                    tooltip:
+                        isPasswordVisible ? 'Ocultar senha' : 'Mostrar senha',
                     onPressed: isLoading
                         ? null
                         : () {
@@ -580,6 +582,9 @@ class _ProfilesPageState extends State<ProfilesPage>
                               : Icons.visibility_off,
                           color: Colors.grey[600],
                         ),
+                        tooltip: isPasswordVisible
+                            ? 'Ocultar senha'
+                            : 'Mostrar senha',
                         onPressed: () {
                           setState(() {
                             isPasswordVisible = !isPasswordVisible;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../constants/app_constants.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart'; // Added import for FirebaseVideoListProvider
 
@@ -18,14 +19,14 @@ class _SplashPageState extends State<SplashPage>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: const Duration(seconds: 2));
+    _controller = AnimationController(
+        vsync: this, duration: AppConstants.splashAnimationDuration);
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
 
     // Verificar se usuário está logado após 3 segundos
-    Future.delayed(const Duration(seconds: 3), () async {
+    Future.delayed(AppConstants.splashRedirectDelay, () async {
       final firebaseProvider = context.read<FirebaseProfileProvider>();
 
       try {
@@ -67,14 +68,14 @@ class _SplashPageState extends State<SplashPage>
             children: [
               Image.asset(
                 'assets/images/mytubelist_logo.png',
-                width: 120,
+                width: AppConstants.splashLogoWidth,
               ),
               const SizedBox(height: 16),
               Text(
                 'MyTubeList',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 28,
+                  fontSize: AppConstants.splashTitleFontSize,
                   fontWeight: FontWeight.bold,
                 ),
               ),

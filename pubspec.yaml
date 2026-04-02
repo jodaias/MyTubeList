@@ -24,6 +24,7 @@ dependencies:
   volume_controller: ^3.4.0
   local_auth: ^2.3.0
   flutter_secure_storage: ^9.2.4
+  get_it: ^7.6.7
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'dart:math';
+import '../constants/app_constants.dart';
 
 class MathQuestion {
   final int a;
@@ -13,7 +14,9 @@ class MathQuestion {
 
 MathQuestion generateRandomQuestion() {
   final random = Random();
-  final a = random.nextInt(8) + 2;
-  final b = random.nextInt(8) + 2;
+  final a = random.nextInt(AppConstants.mathQuestionRange) +
+      AppConstants.mathQuestionMin;
+  final b = random.nextInt(AppConstants.mathQuestionRange) +
+      AppConstants.mathQuestionMin;
   return MathQuestion(a, b);
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 
 class VideoCard extends StatelessWidget {
@@ -57,8 +58,8 @@ class VideoCard extends StatelessWidget {
                     Positioned.fill(
                       child: Center(
                         child: Container(
-                          width: 50,
-                          height: 50,
+                          width: AppConstants.playButtonContainerSize,
+                          height: AppConstants.playButtonContainerSize,
                           decoration: BoxDecoration(
                             color: Colors.black.withValues(alpha: 0.6),
                             shape: BoxShape.circle,
@@ -67,8 +68,9 @@ class VideoCard extends StatelessWidget {
                             icon: const Icon(
                               Icons.play_arrow,
                               color: Colors.white,
-                              size: 30,
+                              size: AppConstants.playButtonIconSize,
                             ),
+                            tooltip: 'Reproduzir vídeo',
                             onPressed: onTap,
                             splashRadius: 25,
                           ),
@@ -92,6 +94,7 @@ class VideoCard extends StatelessWidget {
                             color: Colors.white,
                             size: 22,
                           ),
+                          tooltip: 'Pré-visualizar',
                           onPressed: onPreview,
                           splashRadius: 15,
                           padding: EdgeInsets.zero,
@@ -119,7 +122,7 @@ class VideoCard extends StatelessWidget {
                               : Icons.radio_button_unchecked,
                           color:
                               isSelected == true ? Colors.green : Colors.white,
-                          size: 28,
+                          size: AppConstants.selectionIconSize,
                         ),
                       ),
                     )
@@ -139,8 +142,11 @@ class VideoCard extends StatelessWidget {
                                 ? Icons.remove_circle_outline
                                 : Icons.add_circle_outline,
                             color: isAdded ? Colors.red : Colors.green,
-                            size: 28,
+                            size: AppConstants.selectionIconSize,
                           ),
+                          tooltip: isAdded
+                              ? 'Remover da lista'
+                              : 'Adicionar à lista',
                           onPressed: () async {
                             if (isAdded && onRemoveConfirmed != null) {
                               await onRemoveConfirmed!();
@@ -181,6 +187,7 @@ class VideoCard extends StatelessWidget {
                                 icon: const Icon(Icons.delete_outline),
                                 color: Colors.white,
                                 iconSize: 20,
+                                tooltip: 'Excluir vídeo',
                                 onPressed: () async {
                                   await onDeleteConfirmed!();
                                 },
@@ -195,7 +202,8 @@ class VideoCard extends StatelessWidget {
                 video.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12),
+                style:
+                    const TextStyle(fontSize: AppConstants.videoTitleFontSize),
               ),
               if (isAdded)
                 const Padding(
@@ -205,7 +213,7 @@ class VideoCard extends StatelessWidget {
                     style: TextStyle(
                         color: Colors.green,
                         fontWeight: FontWeight.bold,
-                        fontSize: 10),
+                        fontSize: AppConstants.addedTextFontSize),
                   ),
                 ),
             ],

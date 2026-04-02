@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/video_list_model.dart';
 import '../models/video_model.dart';
 import '../services/firebase_service.dart';
+import '../di/service_locator.dart';
 
 class FirebaseVideoListProvider extends ChangeNotifier {
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = getIt<FirebaseService>();
 
   List<VideoListModel> _videoLists = [];
   bool _isLoading = false;

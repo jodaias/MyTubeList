@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:youtube_api/youtube_api.dart';
+import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 import '../services/firebase_service.dart';
+import '../di/service_locator.dart';
 
 class FirebaseVideoProvider extends ChangeNotifier {
-  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseService _firebaseService = getIt<FirebaseService>();
   final _youtubeApiKey = dotenv.env['YOUTUBE_API_KEY'] ?? '';
   late YoutubeAPI _youtubeApi;
 
@@ -22,7 +24,8 @@ class FirebaseVideoProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    _youtubeApi = YoutubeAPI(_youtubeApiKey, maxResults: 50);
+    _youtubeApi =
+        YoutubeAPI(_youtubeApiKey, maxResults: AppConstants.maxYoutubeResults);
   }
 
   /// 🔎 Busca vídeos no YouTube e retorna a lista sem salvar ainda

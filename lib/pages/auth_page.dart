@@ -4,6 +4,7 @@ import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../models/profile_model.dart';
 import '../services/biometric_service.dart';
+import '../di/service_locator.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -24,7 +25,7 @@ class _AuthPageState extends State<AuthPage> {
   bool _obscurePassword = true;
   ProfileModel? _selectedProfile;
 
-  final BiometricService _biometricService = BiometricService();
+  final BiometricService _biometricService = getIt<BiometricService>();
   bool _biometricAvailable = false;
   bool _biometricEnabledForProfile = false;
 
@@ -271,6 +272,8 @@ class _AuthPageState extends State<AuthPage> {
                           _obscurePassword = !_obscurePassword;
                         });
                       },
+                      tooltip:
+                          _obscurePassword ? 'Mostrar senha' : 'Ocultar senha',
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility

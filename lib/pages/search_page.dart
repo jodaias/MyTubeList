@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
@@ -278,6 +279,7 @@ class _SearchPageState extends State<SearchPage> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.search),
+                  tooltip: 'Buscar',
                   onPressed: () => _searchVideos(_searchController.text),
                 ),
               ],
@@ -445,10 +447,10 @@ class _SearchPageState extends State<SearchPage> {
                         padding: const EdgeInsets.all(8),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 1.1,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
+                          crossAxisCount: AppConstants.gridCrossAxisCount,
+                          childAspectRatio: AppConstants.gridChildAspectRatio,
+                          crossAxisSpacing: AppConstants.gridSpacing,
+                          mainAxisSpacing: AppConstants.gridSpacing,
                         ),
                         itemCount: _searchResults.length,
                         itemBuilder: (context, index) {

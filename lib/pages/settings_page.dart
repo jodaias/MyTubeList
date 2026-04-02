@@ -4,6 +4,7 @@ import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../services/biometric_service.dart';
+import '../di/service_locator.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -23,7 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
 
-  final BiometricService _biometricService = BiometricService();
+  final BiometricService _biometricService = getIt<BiometricService>();
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
 
@@ -411,6 +412,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                     !_obscureCurrentPassword;
                               });
                             },
+                            tooltip: _obscureCurrentPassword
+                                ? 'Mostrar senha'
+                                : 'Ocultar senha',
                             icon: Icon(
                               _obscureCurrentPassword
                                   ? Icons.visibility
@@ -435,6 +439,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                 _obscureNewPassword = !_obscureNewPassword;
                               });
                             },
+                            tooltip: _obscureNewPassword
+                                ? 'Mostrar senha'
+                                : 'Ocultar senha',
                             icon: Icon(
                               _obscureNewPassword
                                   ? Icons.visibility
@@ -469,6 +476,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                     !_obscureConfirmPassword;
                               });
                             },
+                            tooltip: _obscureConfirmPassword
+                                ? 'Mostrar senha'
+                                : 'Ocultar senha',
                             icon: Icon(
                               _obscureConfirmPassword
                                   ? Icons.visibility

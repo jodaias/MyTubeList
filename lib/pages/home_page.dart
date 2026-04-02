@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../constants/app_constants.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/firebase_video_list_provider.dart';
 import '../utils/confirmation_modal.dart';
@@ -227,10 +228,10 @@ class _HomePageState extends State<HomePage> {
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 1.2,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
+                      crossAxisCount: AppConstants.gridCrossAxisCount,
+                      childAspectRatio: AppConstants.homeGridChildAspectRatio,
+                      crossAxisSpacing: AppConstants.gridSpacing,
+                      mainAxisSpacing: AppConstants.gridSpacing,
                     ),
                     itemCount: lists.length,
                     itemBuilder: (context, index) {
@@ -259,7 +260,7 @@ class _HomePageState extends State<HomePage> {
                                     Icon(
                                       Icons.playlist_play,
                                       color: Colors.green[700],
-                                      size: 48,
+                                      size: AppConstants.playlistIconSize,
                                     ),
                                     const SizedBox(height: 12),
                                     Flexible(
@@ -267,7 +268,8 @@ class _HomePageState extends State<HomePage> {
                                         list.name,
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
-                                          fontSize: 16,
+                                          fontSize:
+                                              AppConstants.listNameFontSize,
                                           fontWeight: FontWeight.bold,
                                         ),
                                         maxLines: 2,
