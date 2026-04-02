@@ -53,12 +53,13 @@ class FirebaseVideoProvider extends ChangeNotifier {
   }
 
   /// 📝 Adicionar termo de busca ao histórico do Firebase
-  Future<void> addSearchTerm(String term, String profileId) async {
+  Future<void> addSearchTerm(
+      String term, String profileId, String listId) async {
     try {
       notifyListeners();
 
-      await _firebaseService.addSearchTerm(term, profileId);
-      await loadPreviousSearches(profileId);
+      await _firebaseService.addSearchTerm(term, profileId, listId);
+      await loadPreviousSearches(profileId, listId);
     } catch (e) {
       // Silently handle add search term errors
     } finally {
@@ -67,12 +68,13 @@ class FirebaseVideoProvider extends ChangeNotifier {
   }
 
   /// 📚 Carregar histórico de buscas do Firebase
-  Future<void> loadPreviousSearches(String profileId) async {
+  Future<void> loadPreviousSearches(String profileId, String listId) async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      _previousSearches = await _firebaseService.getSearchHistory(profileId);
+      _previousSearches =
+          await _firebaseService.getSearchHistory(profileId, listId);
     } catch (e) {
       // Silently handle load history errors
       _previousSearches = [];
@@ -113,8 +115,8 @@ class FirebaseVideoProvider extends ChangeNotifier {
   }
 
   /// 🔄 Recarregar histórico de buscas
-  Future<void> reloadSearchHistory(String profileId) async {
-    await loadPreviousSearches(profileId);
+  Future<void> reloadSearchHistory(String profileId, String listId) async {
+    await loadPreviousSearches(profileId, listId);
   }
 
   /// 🧹 Limpar cache local

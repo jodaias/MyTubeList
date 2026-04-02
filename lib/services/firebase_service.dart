@@ -330,58 +330,71 @@ class FirebaseService {
   }
 
   // 🔍 Histórico de buscas
-  Future<void> addSearchTerm(String term, String profileId) async {
+  Future<void> addSearchTerm(
+      String term, String profileId, String listId) async {
     try {
       final user = currentUser;
       if (user == null) throw Exception('Usuário não autenticado');
 
-      // Verificar se o termo já existe para este perfil
+      // Verificar se o termo já existe para este perfil e lista
       final existingQuery = await _userSearchHistoryCollection(user.uid)
           .where('term', isEqualTo: term)
           .where('profileId', isEqualTo: profileId)
+          .where('listId', isEqualTo: listId)
           .limit(1)
           .get();
 
-      // Só adicionar se não existir
       if (existingQuery.docs.isEmpty) {
         await _userSearchHistoryCollection(user.uid).add({
           'term': term,
           'profileId': profileId,
+          'listId': listId,
           'searchedAt': FieldValue.serverTimestamp(),
         });
+      } else {
+        await existingQuery.docs.first.reference.update({
+          'searchedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Manter apenas os 5 termos mais recentes por perfil/lista
+      final recentSearches = await _userSearchHistoryCollection(user.uid)
+          .where('profileId', isEqualTo: profileId)
+          .where('listId', isEqualTo: listId)
+          .orderBy('searchedAt', descending: true)
+          .get();
+
+      if (recentSearches.docs.length > 5) {
+        final docsToDelete = recentSearches.docs.skip(5);
+        final batch = _firestore.batch();
+
+        for (final doc in docsToDelete) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
       }
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<List<String>> getSearchHistory(String profileId) async {
+  Future<List<String>> getSearchHistory(String profileId, String listId) async {
     try {
       final user = currentUser;
       if (user == null) return [];
 
       final querySnapshot = await _userSearchHistoryCollection(user.uid)
           .where('profileId', isEqualTo: profileId)
+          .where('listId', isEqualTo: listId)
           .orderBy('searchedAt', descending: true)
-          .limit(20)
+          .limit(5)
           .get();
 
-      // Usar Set para garantir termos únicos
-      final Set<String> uniqueTerms = {};
-      final List<String> orderedTerms = [];
-
-      for (final doc in querySnapshot.docs) {
+      return querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        final term = data['term'] as String;
-
-        // Adicionar apenas se não existir (mantém ordem)
-        if (!uniqueTerms.contains(term)) {
-          uniqueTerms.add(term);
-          orderedTerms.add(term);
-        }
-      }
-
-      return orderedTerms;
+        return data['term'] as String;
+      }).toList();
     } catch (e) {
       return [];
     }

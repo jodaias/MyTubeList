@@ -42,8 +42,10 @@ class _SearchPageState extends State<SearchPage> {
     final firebaseProfileProvider = context.read<FirebaseProfileProvider>();
 
     if (firebaseProfileProvider.currentProfile != null) {
-      await firebaseVideoProvider
-          .loadPreviousSearches(firebaseProfileProvider.currentProfile!.id);
+      await firebaseVideoProvider.loadPreviousSearches(
+        firebaseProfileProvider.currentProfile!.id,
+        widget.listId,
+      );
     }
   }
 
@@ -78,7 +80,10 @@ class _SearchPageState extends State<SearchPage> {
 
       if (firebaseProfileProvider.currentProfile != null) {
         await firebaseVideoProvider.addSearchTerm(
-            query, firebaseProfileProvider.currentProfile!.id);
+          query,
+          firebaseProfileProvider.currentProfile!.id,
+          widget.listId,
+        );
       }
 
       // Verificar quais vídeos já estão na lista e selecioná-los automaticamente
@@ -291,7 +296,7 @@ class _SearchPageState extends State<SearchPage> {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: previousSearches.take(5).map((search) {
+                    children: previousSearches.map((search) {
                       return ActionChip(
                         label: Text(search),
                         onPressed: () {
