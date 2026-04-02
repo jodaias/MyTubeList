@@ -155,6 +155,25 @@ class _ProfilesPageState extends State<ProfilesPage>
                   setState(() {}); // Reagir às mudanças
                 },
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                          _showPasswordResetDialog();
+                        },
+                  child: Text(
+                    'Esqueci minha senha',
+                    style: TextStyle(
+                      color: Colors.orange[700],
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           actions: [
@@ -244,6 +263,151 @@ class _ProfilesPageState extends State<ProfilesPage>
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showPasswordResetDialog() async {
+    final emailController = TextEditingController();
+    String? resetMessage;
+    Color? resetMessageColor;
+    bool isResetting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Recuperar Senha'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Digite o email associado à sua conta para receber um link de recuperação:',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      hintText: 'seu@email.com',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  if (resetMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: resetMessageColor?.withValues(alpha: 0.1) ??
+                            Colors.green[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                            color: resetMessageColor ?? Colors.green),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            resetMessageColor == Colors.red
+                                ? Icons.error
+                                : Icons.check_circle,
+                            color: resetMessageColor ?? Colors.green,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              resetMessage ?? '',
+                              style: TextStyle(
+                                color: resetMessageColor ?? Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isResetting ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: isResetting
+                      ? null
+                      : () async {
+                          setState(() {
+                            isResetting = true;
+                            resetMessage = null;
+                          });
+
+                          try {
+                            final firebaseProvider =
+                                this.context.read<FirebaseProfileProvider>();
+                            final emailText = emailController.text;
+                            if (emailText.trim().isEmpty ||
+                                !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                    .hasMatch(emailText.trim())) {
+                              setState(() {
+                                resetMessage = 'Digite um email válido';
+                                resetMessageColor = Colors.red;
+                              });
+                              return;
+                            }
+                            final success = await firebaseProvider
+                                .sendPasswordResetEmail(emailText.trim());
+
+                            if (success) {
+                              setState(() {
+                                resetMessage =
+                                    'Email enviado! Verifique sua caixa de entrada.';
+                                resetMessageColor = Colors.green;
+                              });
+
+                              Future.delayed(const Duration(seconds: 2), () {
+                                if (context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              });
+                            } else {
+                              setState(() {
+                                resetMessage =
+                                    'Erro ao enviar email. Verifique o email.';
+                                resetMessageColor = Colors.red;
+                              });
+                            }
+                          } catch (e) {
+                            setState(() {
+                              resetMessage = 'Erro: ${e.toString()}';
+                              resetMessageColor = Colors.red;
+                            });
+                          } finally {
+                            setState(() {
+                              isResetting = false;
+                            });
+                          }
+                        },
+                  child: isResetting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Enviar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
