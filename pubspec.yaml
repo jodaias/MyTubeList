@@ -22,6 +22,8 @@ dependencies:
   share_plus: ^11.1.0
   screen_brightness: ^2.1.7
   volume_controller: ^3.4.0
+  local_auth: ^2.3.0
+  flutter_secure_storage: ^9.2.4
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../models/profile_model.dart';
+import '../services/biometric_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -23,11 +24,15 @@ class _AuthPageState extends State<AuthPage> {
   bool _obscurePassword = true;
   ProfileModel? _selectedProfile;
 
+  final BiometricService _biometricService = BiometricService();
+  bool _biometricAvailable = false;
+  bool _biometricEnabledForProfile = false;
+
   @override
   void initState() {
     super.initState();
     // Verificar se recebeu um perfil como argumento
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args != null && args['profile'] != null) {
@@ -38,14 +43,94 @@ class _AuthPageState extends State<AuthPage> {
           _isLogin = true;
         });
 
+        // Verificar biometria
+        await _checkBiometric();
+
         // Se usernameReadOnly é true, não fazer login automático
         final usernameReadOnly = args['usernameReadOnly'] as bool? ?? false;
         if (!usernameReadOnly) {
           // Fazer login automático apenas se não for modo somente leitura
           _handleSubmit();
+        } else if (_biometricAvailable && _biometricEnabledForProfile) {
+          // Tentar login biométrico automaticamente
+          _handleBiometricLogin();
         }
       }
     });
+  }
+
+  Future<void> _checkBiometric() async {
+    final available = await _biometricService.isBiometricAvailable();
+    bool enabled = false;
+    if (available && _selectedProfile != null) {
+      enabled = await _biometricService
+          .isBiometricEnabledForProfile(_selectedProfile!.id);
+    }
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabledForProfile = enabled;
+      });
+    }
+  }
+
+  Future<void> _handleBiometricLogin() async {
+    if (_selectedProfile == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final authenticated = await _biometricService.authenticate();
+      if (!authenticated) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final credentials =
+          await _biometricService.getCredentials(_selectedProfile!.id);
+      if (credentials == null) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Credenciais biométricas não encontradas. Faça login com senha.';
+          _biometricEnabledForProfile = false;
+        });
+        return;
+      }
+
+      final firebaseProvider = context.read<FirebaseProfileProvider>();
+      final success = await firebaseProvider.signInWithUsername(
+        credentials['username']!,
+        credentials['password']!,
+      );
+
+      if (success) {
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Credenciais inválidas - pode ser que a senha mudou
+        await _biometricService.removeCredentials(_selectedProfile!.id);
+        setState(() {
+          _errorMessage =
+              'Credenciais expiradas. Faça login com senha novamente.';
+          _biometricEnabledForProfile = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -264,6 +349,41 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                 ),
 
+                // Botão de login biométrico
+                if (_isLogin &&
+                    _biometricAvailable &&
+                    _biometricEnabledForProfile &&
+                    _selectedProfile != null) ...[
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('ou', style: TextStyle(color: Colors.grey)),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _handleBiometricLogin,
+                      icon: const Icon(Icons.fingerprint, size: 28),
+                      label: const Text(
+                        'Entrar com Biometria',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green[700],
+                        side: BorderSide(color: Colors.green[700]!),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
+
                 const SizedBox(height: 16),
 
                 // Botão para alternar entre login e criar conta (só mostrar se não recebeu perfil)
@@ -347,6 +467,13 @@ class _AuthPageState extends State<AuthPage> {
       }
 
       if (success) {
+        // Oferecer salvar biometria após login com senha
+        if (_isLogin &&
+            _biometricAvailable &&
+            !_biometricEnabledForProfile &&
+            _selectedProfile != null) {
+          await _offerBiometricSetup();
+        }
         Navigator.pushReplacementNamed(context, '/home');
       } else {
         setState(() {
@@ -362,6 +489,41 @@ class _AuthPageState extends State<AuthPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _offerBiometricSetup() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ativar Biometria'),
+        content: const Text(
+          'Deseja usar biometria (impressão digital / reconhecimento facial) para entrar na próxima vez?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Não'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.fingerprint),
+            label: const Text('Ativar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[700],
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && _selectedProfile != null) {
+      await _biometricService.saveCredentials(
+        _selectedProfile!.id,
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
     }
   }
 

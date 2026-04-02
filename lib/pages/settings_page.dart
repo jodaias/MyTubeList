@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
-import '../models/profile_model.dart';
+import '../services/biometric_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -23,6 +23,10 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
 
+  final BiometricService _biometricService = BiometricService();
+  bool _biometricAvailable = false;
+  bool _biometricEnabled = false;
+
   // Mensagens customizadas por bloco
   String? _emailMessage;
   Color? _emailMessageColor;
@@ -36,6 +40,24 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadCurrentEmail();
     _reloadEmailStatus();
+    _loadBiometricStatus();
+  }
+
+  Future<void> _loadBiometricStatus() async {
+    final available = await _biometricService.isBiometricAvailable();
+    final firebaseProvider = context.read<FirebaseProfileProvider>();
+    final profile = firebaseProvider.currentProfile;
+    bool enabled = false;
+    if (available && profile != null) {
+      enabled =
+          await _biometricService.isBiometricEnabledForProfile(profile.id);
+    }
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
   }
 
   Future<void> _reloadEmailStatus() async {
@@ -106,7 +128,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       if (profile != null) ...[
                         _buildInfoRow('Nome', profile.name),
-                        _buildInfoRow('Usuário', profile.username ?? ''),
+                        _buildInfoRow('Usuário', profile.username),
                         _buildInfoRow('Categoria',
                             profile.category?.displayName ?? 'Adulto'),
                       ],
@@ -114,6 +136,75 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Seção de Biometria
+              if (_biometricAvailable)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.fingerprint,
+                                size: 24, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Login com Biometria',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Use impressão digital ou reconhecimento facial para entrar sem digitar a senha.',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        SwitchListTile(
+                          title: const Text('Biometria ativada'),
+                          subtitle: Text(
+                            _biometricEnabled
+                                ? 'Você pode entrar usando biometria'
+                                : 'Ative para entrar sem senha',
+                          ),
+                          value: _biometricEnabled,
+                          activeThumbColor: Colors.green,
+                          onChanged: _isLoading
+                              ? null
+                              : (value) async {
+                                  if (value) {
+                                    // Ativar: pedir a senha para salvar
+                                    await _enableBiometric();
+                                  } else {
+                                    // Desativar
+                                    if (profile != null) {
+                                      await _biometricService
+                                          .disableBiometric(profile.id);
+                                      setState(() {
+                                        _biometricEnabled = false;
+                                      });
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Biometria desativada'),
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 24),
 
@@ -567,6 +658,88 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _enableBiometric() async {
+    final firebaseProvider = context.read<FirebaseProfileProvider>();
+    final profile = firebaseProvider.currentProfile;
+    if (profile == null) return;
+
+    final passwordController = TextEditingController();
+    bool obscure = true;
+
+    final password = await showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Confirme sua senha'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Digite sua senha para ativar a biometria:'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: passwordController,
+                obscureText: obscure,
+                decoration: InputDecoration(
+                  labelText: 'Senha',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => obscure = !obscure),
+                    icon:
+                        Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, passwordController.text),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[700],
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirmar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (password == null || password.isEmpty) return;
+
+    // Verificar senha fazendo login
+    final success = await firebaseProvider.signInWithUsername(
+      profile.username,
+      password,
+    );
+
+    if (success) {
+      await _biometricService.saveCredentials(
+          profile.id, profile.username, password);
+      setState(() {
+        _biometricEnabled = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Biometria ativada com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Senha incorreta. Tente novamente.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _updateEmail() async {
