@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 import '../providers/firebase_video_list_provider.dart';
+import '../widgets/ad_banner_widget.dart';
 import 'package:screen_brightness/screen_brightness.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -673,6 +674,7 @@ class _PlayerPageState extends State<PlayerPage> {
                 Expanded(child: _buildVideoList()),
               ],
             ),
+            bottomNavigationBar: isFullScreen ? null : const AdBannerWidget(),
           ),
         ),
         if (isLandscape) ...[

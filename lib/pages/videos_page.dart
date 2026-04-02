@@ -5,6 +5,7 @@ import '../providers/firebase_video_list_provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
+import '../widgets/ad_banner_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../utils/error_listener.dart';
 
@@ -241,6 +242,7 @@ class _VideosPageState extends State<VideosPage> {
                 );
               },
             ),
+      bottomNavigationBar: const AdBannerWidget(),
     );
   }
 }
