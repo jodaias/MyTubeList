@@ -10,10 +10,17 @@ class FirebaseProfileProvider extends ChangeNotifier {
   ProfileModel? _currentProfile;
   bool _isLoading = false;
   bool _isAuthenticated = false;
+  String? _errorMessage;
 
   ProfileModel? get currentProfile => _currentProfile;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _isAuthenticated;
+  String? get errorMessage => _errorMessage;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   FirebaseProfileProvider() {
     _init();
@@ -33,7 +40,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
         );
       }
     } catch (e) {
-      // Silently handle initialization errors
+      _errorMessage = 'Erro ao inicializar perfil.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -55,6 +62,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       }
     } catch (e) {
       _isAuthenticated = false;
+      _errorMessage = 'Erro ao verificar autenticação.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -78,6 +86,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return _isAuthenticated;
     } catch (e) {
+      _errorMessage = 'Falha no login. Verifique suas credenciais.';
       return false;
     } finally {
       _isLoading = false;
@@ -104,6 +113,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
+      _errorMessage = 'Erro ao criar usuário.';
       return false;
     } finally {
       _isLoading = false;
@@ -140,7 +150,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       _isAuthenticated = false;
       _currentProfile = null;
     } catch (e) {
-      // Silently handle logout errors
+      _errorMessage = 'Erro ao fazer logout.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -157,7 +167,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       _isAuthenticated = false;
       _currentProfile = null;
     } catch (e) {
-      // Silently handle delete errors
+      _errorMessage = 'Erro ao excluir usuário.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -175,6 +185,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
+      _errorMessage = 'Erro ao sincronizar perfil.';
       return false;
     } finally {
       _isLoading = false;
@@ -190,7 +201,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       _currentProfile = await _firebaseService.getProfile();
     } catch (e) {
-      // Silently handle reload errors
+      _errorMessage = 'Erro ao recarregar perfil.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -212,6 +223,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
+      _errorMessage = 'Erro ao atualizar email.';
       return false;
     } finally {
       _isLoading = false;
@@ -231,6 +243,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
+      _errorMessage = 'Erro ao alterar senha.';
       return false;
     } finally {
       _isLoading = false;
@@ -248,6 +261,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
+      _errorMessage = 'Erro ao enviar email de recuperação.';
       return false;
     } finally {
       _isLoading = false;
@@ -270,6 +284,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
 
       return success;
     } catch (e) {
+      _errorMessage = 'Erro ao enviar verificação de email.';
       return false;
     } finally {
       _isLoading = false;
@@ -283,7 +298,7 @@ class FirebaseProfileProvider extends ChangeNotifier {
       await _firebaseService.reloadUser();
       notifyListeners();
     } catch (e) {
-      // Silently handle reload errors
+      _errorMessage = 'Erro ao recarregar dados do usuário.';
     }
   }
 }

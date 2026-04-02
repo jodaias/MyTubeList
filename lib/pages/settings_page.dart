@@ -5,6 +5,8 @@ import '../providers/local_profiles_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../services/biometric_service.dart';
 import '../di/service_locator.dart';
+import '../utils/input_validators.dart';
+import '../utils/error_listener.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -94,6 +96,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final firebaseProvider = context.read<FirebaseProfileProvider>();
     final profile = firebaseProvider.currentProfile;
+
+    showProviderError(
+        context, firebaseProvider.errorMessage, firebaseProvider.clearError);
 
     return Scaffold(
       appBar: AppBar(
@@ -333,16 +338,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           prefixIcon: Icon(Icons.email),
                         ),
                         keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Digite um email';
-                          }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                              .hasMatch(value)) {
-                            return 'Digite um email válido';
-                          }
-                          return null;
-                        },
+                        validator: InputValidators.validateEmail,
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -449,15 +445,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Digite a nova senha';
-                          }
-                          if (value.length < 6) {
-                            return 'A senha deve ter pelo menos 6 caracteres';
-                          }
-                          return null;
-                        },
+                        validator: InputValidators.validateNewPassword,
                       ),
                       const SizedBox(height: 16),
 
@@ -486,15 +474,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Confirme a nova senha';
-                          }
-                          if (value != _newPasswordController.text) {
-                            return 'As senhas não coincidem';
-                          }
-                          return null;
-                        },
+                        validator: (value) =>
+                            InputValidators.validateConfirmPassword(
+                                value, _newPasswordController.text),
                       ),
                       const SizedBox(height: 16),
 

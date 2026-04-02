@@ -15,10 +15,17 @@ class FirebaseVideoProvider extends ChangeNotifier {
   List<VideoModel> _allCachedVideos = [];
   List<String> _previousSearches = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   List<VideoModel> get allCachedVideos => _allCachedVideos;
   List<String> get previousSearches => _previousSearches;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   FirebaseVideoProvider() {
     _init();
@@ -48,7 +55,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
         );
       }).toList();
     } catch (e) {
-      // Silently handle search errors
+      _errorMessage = 'Erro ao buscar vídeos. Verifique sua conexão.';
       return [];
     } finally {
       _isLoading = false;
@@ -65,7 +72,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
       await _firebaseService.addSearchTerm(term, profileId, listId);
       await loadPreviousSearches(profileId, listId);
     } catch (e) {
-      // Silently handle add search term errors
+      _errorMessage = 'Erro ao salvar termo de busca.';
     } finally {
       notifyListeners();
     }
@@ -81,7 +88,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
         () => _firebaseService.getSearchHistory(profileId, listId),
       );
     } catch (e) {
-      // Silently handle load history errors
+      _errorMessage = 'Erro ao carregar histórico de buscas.';
       _previousSearches = [];
     } finally {
       _isLoading = false;
@@ -98,7 +105,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      // Silently handle cache errors
+      _errorMessage = 'Erro ao salvar vídeo no cache.';
     }
   }
 
@@ -108,7 +115,7 @@ class FirebaseVideoProvider extends ChangeNotifier {
       _allCachedVideos.removeWhere((video) => video.id == videoId);
       notifyListeners();
     } catch (e) {
-      // Silently handle remove cache errors
+      _errorMessage = 'Erro ao remover vídeo do cache.';
     }
   }
 

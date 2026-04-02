@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -9,6 +10,7 @@ import '../providers/firebase_video_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
 import '../widgets/empty_state_widget.dart';
+import '../utils/error_listener.dart';
 
 class SearchPage extends StatefulWidget {
   final String listId;
@@ -32,6 +34,7 @@ class _SearchPageState extends State<SearchPage> {
   YoutubePlayerController? _previewController;
   String? _previewVideoTitle;
   String? _previewVideoId;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> _searchVideos(String query) async {
+    _debounceTimer?.cancel();
     if (query.trim().isEmpty) return;
 
     // Validação matemática apenas uma vez
@@ -239,6 +243,9 @@ class _SearchPageState extends State<SearchPage> {
     final firebaseVideoProvider = context.watch<FirebaseVideoProvider>();
     final previousSearches = firebaseVideoProvider.previousSearches;
 
+    showProviderError(context, firebaseVideoProvider.errorMessage,
+        firebaseVideoProvider.clearError);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green[700],
@@ -263,6 +270,13 @@ class _SearchPageState extends State<SearchPage> {
                       border: OutlineInputBorder(),
                     ),
                     onSubmitted: _searchVideos,
+                    onChanged: (value) {
+                      _debounceTimer?.cancel();
+                      _debounceTimer = Timer(
+                        const Duration(milliseconds: 800),
+                        () => _searchVideos(value),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -463,6 +477,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _previewController?.dispose();
     _searchController.dispose();
     super.dispose();

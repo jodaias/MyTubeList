@@ -6,6 +6,7 @@ import '../providers/firebase_profile_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
 import '../widgets/empty_state_widget.dart';
+import '../utils/error_listener.dart';
 
 class VideosPage extends StatefulWidget {
   final String listId;
@@ -77,6 +78,10 @@ class _VideosPageState extends State<VideosPage> {
   Widget build(BuildContext context) {
     final firebaseVideoListProvider =
         context.watch<FirebaseVideoListProvider>();
+
+    showProviderError(context, firebaseVideoListProvider.errorMessage,
+        firebaseVideoListProvider.clearError);
+
     final videoList = firebaseVideoListProvider.getVideoListById(widget.listId);
 
     if (videoList == null) {

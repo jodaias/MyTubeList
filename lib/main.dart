@@ -24,6 +24,7 @@ import 'pages/auth_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/password_reset_page.dart';
 import 'di/service_locator.dart';
+import 'widgets/connectivity_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -107,6 +108,9 @@ class MyApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
+      builder: (context, child) {
+        return ConnectivityBanner(child: child ?? const SizedBox.shrink());
+      },
       initialRoute: '/',
       routes: {
         '/': (_) => const SplashPage(),

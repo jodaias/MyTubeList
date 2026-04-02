@@ -49,6 +49,15 @@ class VideoCard extends StatelessWidget {
                       child: Image.network(
                         video.thumbnailUrl,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade300,
+                            child: const Center(
+                              child: Icon(Icons.broken_image,
+                                  size: 40, color: Colors.grey),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),

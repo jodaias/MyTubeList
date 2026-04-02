@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import '../models/profile_model.dart';
+import '../utils/input_validators.dart';
 
 class AuthRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -32,7 +33,7 @@ class AuthRepository {
       String username, String password, String name,
       {UserCategory? category}) async {
     try {
-      if (!_isValidUsername(username)) {
+      if (!InputValidators.isValidUsername(username)) {
         throw Exception(
             'Nome de usuário inválido. Use apenas letras, números e underscore.');
       }
@@ -97,7 +98,7 @@ class AuthRepository {
     try {
       final user = currentUser;
       if (user == null) return false;
-      if (!_isValidEmail(newEmail)) return false;
+      if (!InputValidators.isValidEmail(newEmail)) return false;
 
       await user.verifyBeforeUpdateEmail(newEmail);
 
@@ -236,16 +237,5 @@ class AuthRepository {
     if (existingProfile == null) {
       await createProfile(profile);
     }
-  }
-
-  bool _isValidUsername(String username) {
-    final regex = RegExp(r'^[a-zA-Z0-9_]+$');
-    return regex.hasMatch(username) &&
-        username.length >= 3 &&
-        username.length <= 20;
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 }

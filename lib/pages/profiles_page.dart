@@ -5,6 +5,7 @@ import '../providers/firebase_profile_provider.dart';
 import '../providers/local_profiles_provider.dart';
 import '../models/profile_model.dart';
 import '../utils/confirmation_modal.dart';
+import '../utils/input_validators.dart';
 
 class ProfilesPage extends StatefulWidget {
   const ProfilesPage({Key? key}) : super(key: key);
@@ -356,8 +357,8 @@ class _ProfilesPageState extends State<ProfilesPage>
                                 this.context.read<FirebaseProfileProvider>();
                             final emailText = emailController.text;
                             if (emailText.trim().isEmpty ||
-                                !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(emailText.trim())) {
+                                !InputValidators.isValidEmail(
+                                    emailText.trim())) {
                               setState(() {
                                 resetMessage = 'Digite um email válido';
                                 resetMessageColor = Colors.red;
@@ -457,12 +458,8 @@ class _ProfilesPageState extends State<ProfilesPage>
                     ),
                     autofocus: true,
                     onChanged: (value) {
-                      // Permitir apenas letras, espaços e apóstrofos
-                      String cleanValue = value
-                          .replaceAll(RegExp(r'[0-9]'), '')
-                          .replaceAll(RegExp(r"[^\p{L}\s']", unicode: true), '')
-                          .replaceAll(RegExp(r'\s+'), ' ')
-                          .trim();
+                      String cleanValue =
+                          InputValidators.cleanProfileName(value);
                       if (value != cleanValue) {
                         nameController.value = TextEditingValue(
                           text: cleanValue,
@@ -472,18 +469,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                       }
                       setState(() {});
                     },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite um nome para o perfil';
-                      }
-                      if (value.length < 2) {
-                        return 'O nome deve ter pelo menos 2 caracteres';
-                      }
-                      if (value.length > 30) {
-                        return 'O nome deve ter no máximo 30 caracteres';
-                      }
-                      return null;
-                    },
+                    validator: InputValidators.validateProfileName,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 16),
@@ -505,16 +491,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                           : null,
                     ),
                     onChanged: (value) async {
-                      String cleanValue = value
-                          .toLowerCase()
-                          .replaceAll(RegExp(r'\s'), '')
-                          .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                          .replaceAll(RegExp(r'[éèêë]'), 'e')
-                          .replaceAll(RegExp(r'[íìîï]'), 'i')
-                          .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                          .replaceAll(RegExp(r'[úùûü]'), 'u')
-                          .replaceAll(RegExp(r'[çÇ]'), 'c')
-                          .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+                      String cleanValue = InputValidators.cleanUsername(value);
                       if (value != cleanValue) {
                         usernameController.value = TextEditingValue(
                           text: cleanValue,
@@ -553,18 +530,9 @@ class _ProfilesPageState extends State<ProfilesPage>
                       }
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite um nome de usuário';
-                      }
-                      if (value.length < 3) {
-                        return 'O nome de usuário deve ter pelo menos 3 caracteres';
-                      }
-                      if (value.length > 20) {
-                        return 'O nome de usuário deve ter no máximo 20 caracteres';
-                      }
-                      if (usernameError != null) {
-                        return usernameError;
-                      }
+                      final baseError = InputValidators.validateUsername(value);
+                      if (baseError != null) return baseError;
+                      if (usernameError != null) return usernameError;
                       return null;
                     },
                     autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -594,13 +562,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                     ),
                     obscureText: !isPasswordVisible,
                     onChanged: (value) {
-                      String cleanValue = value
-                          .replaceAll(RegExp(r'\s'), '')
-                          .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                          .replaceAll(RegExp(r'[éèêë]'), 'e')
-                          .replaceAll(RegExp(r'[íìîï]'), 'i')
-                          .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                          .replaceAll(RegExp(r'[úùûü]'), 'u');
+                      String cleanValue = InputValidators.cleanPassword(value);
                       if (value != cleanValue) {
                         passwordController.value = TextEditingValue(
                           text: cleanValue,
@@ -610,18 +572,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                       }
                       setState(() {});
                     },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Digite uma senha';
-                      }
-                      if (value.length < 6) {
-                        return 'A senha deve ter pelo menos 6 caracteres';
-                      }
-                      if (value.length > 25) {
-                        return 'A senha deve ter no máximo 25 caracteres';
-                      }
-                      return null;
-                    },
+                    validator: InputValidators.validatePassword,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 16),

@@ -10,9 +10,16 @@ class FirebaseVideoListProvider extends ChangeNotifier {
 
   List<VideoListModel> _videoLists = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
   List<VideoListModel> get videoLists => _videoLists;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   /// 📋 Carregar listas de vídeos do Firebase
   Future<void> loadVideoLists() async {
@@ -27,6 +34,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _isLoading = false;
+      _errorMessage = 'Erro ao carregar listas. Verifique sua conexão.';
       notifyListeners();
     }
   }
@@ -49,7 +57,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      // Silently handle creation errors
+      _errorMessage = 'Erro ao criar lista.';
       return false;
     } finally {
       notifyListeners();
@@ -76,8 +84,8 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
+      _errorMessage = 'Erro ao atualizar lista.';
       notifyListeners();
-      // Silently handle update errors
       return false;
     }
   }
@@ -94,7 +102,7 @@ class FirebaseVideoListProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      // Silently handle delete errors
+      _errorMessage = 'Erro ao excluir lista.';
       return false;
     } finally {
       notifyListeners();

@@ -9,6 +9,7 @@ import '../utils/confirmation_modal.dart';
 import '../models/video_list_model.dart';
 import '../models/profile_model.dart';
 import '../widgets/empty_state_widget.dart';
+import '../utils/error_listener.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -62,6 +63,11 @@ class _HomePageState extends State<HomePage> {
     final firebaseProfileProvider = context.watch<FirebaseProfileProvider>();
     final firebaseVideoListProvider =
         context.watch<FirebaseVideoListProvider>();
+
+    showProviderError(context, firebaseProfileProvider.errorMessage,
+        firebaseProfileProvider.clearError);
+    showProviderError(context, firebaseVideoListProvider.errorMessage,
+        firebaseVideoListProvider.clearError);
 
     final selectedProfile = firebaseProfileProvider.currentProfile;
 

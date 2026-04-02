@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -62,6 +64,9 @@ class _PlayerPageState extends State<PlayerPage> {
 
   // Listener reference for proper cleanup
   late final VoidCallback _controllerListener;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _wasOffline = false;
+  Key _playerKey = UniqueKey();
 
   @override
   void initState() {
@@ -85,6 +90,27 @@ class _PlayerPageState extends State<PlayerPage> {
     });
 
     _initializeSystemControls();
+    _setupConnectivityListener();
+  }
+
+  void _setupConnectivityListener() {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((results) {
+      final isOffline = results.every((r) => r == ConnectivityResult.none);
+      if (isOffline) {
+        _wasOffline = true;
+      } else if (_wasOffline) {
+        _wasOffline = false;
+        // Save position before recreating
+        final lastPosition = _controller.value.position.inSeconds;
+        // Recreate controller and force full widget rebuild
+        _controller.removeListener(_controllerListener);
+        _controller.dispose();
+        _setupController(startAt: lastPosition);
+        _controller.addListener(_controllerListener);
+        setState(() => _playerKey = UniqueKey());
+      }
+    });
   }
 
   Future<void> _setPlayerOrientations() {
@@ -376,12 +402,12 @@ class _PlayerPageState extends State<PlayerPage> {
     _showUnlockButtonTemporarily();
   }
 
-  void _setupController() {
+  void _setupController({int startAt = 0}) {
     final video = widget.videos[_currentIndex];
 
     _controller = YoutubePlayerController(
       initialVideoId: video.id,
-      flags: const YoutubePlayerFlags(
+      flags: YoutubePlayerFlags(
         autoPlay: true,
         mute: false,
         hideControls: false,
@@ -390,6 +416,7 @@ class _PlayerPageState extends State<PlayerPage> {
         disableDragSeek: true,
         hideThumbnail: true,
         showLiveFullscreenButton: true,
+        startAt: startAt,
       ),
     );
   }
@@ -456,6 +483,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _controller.removeListener(_controllerListener);
     _setPortraitOnlyOrientation();
     _controller.dispose();
@@ -476,6 +504,7 @@ class _PlayerPageState extends State<PlayerPage> {
     return Stack(
       children: [
         YoutubePlayerBuilder(
+          key: _playerKey,
           onExitFullScreen: () {
             setState(() {
               _showList = false;
@@ -875,6 +904,15 @@ class _PlayerPageState extends State<PlayerPage> {
                             width: double.infinity,
                             height: 100,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: double.infinity,
+                                height: 100,
+                                color: Colors.grey.shade800,
+                                child: const Icon(Icons.broken_image,
+                                    color: Colors.grey),
+                              );
+                            },
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -976,6 +1014,15 @@ class _PlayerPageState extends State<PlayerPage> {
                               height: 60,
                               width: 100,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 60,
+                                  width: 100,
+                                  color: Colors.grey.shade800,
+                                  child: const Icon(Icons.broken_image,
+                                      size: 24, color: Colors.grey),
+                                );
+                              },
                             ),
                           ),
                           if (_currentIndex == index)

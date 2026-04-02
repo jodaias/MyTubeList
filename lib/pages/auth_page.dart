@@ -5,6 +5,7 @@ import '../providers/local_profiles_provider.dart';
 import '../models/profile_model.dart';
 import '../services/biometric_service.dart';
 import '../di/service_locator.dart';
+import '../utils/input_validators.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -188,19 +189,7 @@ class _AuthPageState extends State<AuthPage> {
                   keyboardType: TextInputType.text,
                   textCapitalization: TextCapitalization.none,
                   onChanged: (value) {
-                    // Remover espaços, acentos e converter para minúsculo
-                    String cleanValue = value
-                        .toLowerCase() // Converter para minúsculo
-                        .replaceAll(RegExp(r'\s'), '') // Remove espaços
-                        .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                        .replaceAll(RegExp(r'[éèêë]'), 'e')
-                        .replaceAll(RegExp(r'[íìîï]'), 'i')
-                        .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                        .replaceAll(RegExp(r'[úùûü]'), 'u')
-                        .replaceAll(
-                            RegExp(r'[çÇ]'), 'c') // Converter ç e Ç para c
-                        .replaceAll(RegExp(r'[^a-z0-9_]'),
-                            ''); // Apenas letras, números e underscore
+                    String cleanValue = InputValidators.cleanUsername(value);
 
                     if (value != cleanValue) {
                       _usernameController.value = TextEditingValue(
@@ -222,18 +211,7 @@ class _AuthPageState extends State<AuthPage> {
                         ? const Icon(Icons.lock, color: Colors.grey)
                         : null,
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Digite um nome de usuário';
-                    }
-                    if (value.length < 3) {
-                      return 'Nome de usuário deve ter pelo menos 3 caracteres';
-                    }
-                    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(value)) {
-                      return 'Apenas letras minúsculas, números e underscore';
-                    }
-                    return null;
-                  },
+                  validator: InputValidators.validateUsername,
                 ),
                 const SizedBox(height: 16),
 
@@ -244,14 +222,7 @@ class _AuthPageState extends State<AuthPage> {
                   textInputAction: TextInputAction.done,
                   keyboardType: TextInputType.visiblePassword,
                   onChanged: (value) {
-                    // Remover espaços e acentos da senha
-                    String cleanValue = value
-                        .replaceAll(RegExp(r'\s'), '') // Remove espaços
-                        .replaceAll(RegExp(r'[áàâãä]'), 'a')
-                        .replaceAll(RegExp(r'[éèêë]'), 'e')
-                        .replaceAll(RegExp(r'[íìîï]'), 'i')
-                        .replaceAll(RegExp(r'[óòôõö]'), 'o')
-                        .replaceAll(RegExp(r'[úùûü]'), 'u');
+                    String cleanValue = InputValidators.cleanPassword(value);
 
                     if (value != cleanValue) {
                       _passwordController.value = TextEditingValue(
@@ -281,15 +252,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Digite sua senha';
-                    }
-                    if (value.length < 6) {
-                      return 'A senha deve ter pelo menos 6 caracteres';
-                    }
-                    return null;
-                  },
+                  validator: InputValidators.validatePassword,
                 ),
                 const SizedBox(height: 16),
 
