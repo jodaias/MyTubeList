@@ -14,6 +14,11 @@ class FirebaseService {
       _usersCollection.doc(userId).collection('videoLists');
   CollectionReference _userSearchHistoryCollection(String userId) =>
       _usersCollection.doc(userId).collection('searchHistory');
+  CollectionReference _userSearchHistoryTermsCollection(
+          String userId, String profileId, String listId) =>
+      _userSearchHistoryCollection(userId)
+          .doc('${profileId}_$listId')
+          .collection('terms');
 
   // 🔐 Autenticação usando apenas Firebase Auth (SEM armazenar senhas no Firestore)
   Future<bool> signInWithUsername(String username, String password) async {
@@ -336,33 +341,22 @@ class FirebaseService {
       final user = currentUser;
       if (user == null) throw Exception('Usuário não autenticado');
 
-      // Verificar se o termo já existe para este perfil e lista
-      final existingQuery = await _userSearchHistoryCollection(user.uid)
-          .where('term', isEqualTo: term)
-          .where('profileId', isEqualTo: profileId)
-          .where('listId', isEqualTo: listId)
-          .limit(1)
-          .get();
+      final normalizedTerm = term.trim();
+      if (normalizedTerm.isEmpty) return;
 
-      if (existingQuery.docs.isEmpty) {
-        await _userSearchHistoryCollection(user.uid).add({
-          'term': term,
-          'profileId': profileId,
-          'listId': listId,
-          'searchedAt': FieldValue.serverTimestamp(),
-        });
-      } else {
-        await existingQuery.docs.first.reference.update({
-          'searchedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      final termDocId = Uri.encodeComponent(normalizedTerm.toLowerCase());
+      final termsCollection =
+          _userSearchHistoryTermsCollection(user.uid, profileId, listId);
+
+      // Upsert por termo (por perfil/lista), atualizando timestamp quando repetir.
+      await termsCollection.doc(termDocId).set({
+        'term': normalizedTerm,
+        'searchedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       // Manter apenas os 5 termos mais recentes por perfil/lista
-      final recentSearches = await _userSearchHistoryCollection(user.uid)
-          .where('profileId', isEqualTo: profileId)
-          .where('listId', isEqualTo: listId)
-          .orderBy('searchedAt', descending: true)
-          .get();
+      final recentSearches =
+          await termsCollection.orderBy('searchedAt', descending: true).get();
 
       if (recentSearches.docs.length > 5) {
         final docsToDelete = recentSearches.docs.skip(5);
@@ -384,12 +378,11 @@ class FirebaseService {
       final user = currentUser;
       if (user == null) return [];
 
-      final querySnapshot = await _userSearchHistoryCollection(user.uid)
-          .where('profileId', isEqualTo: profileId)
-          .where('listId', isEqualTo: listId)
-          .orderBy('searchedAt', descending: true)
-          .limit(5)
-          .get();
+      final querySnapshot =
+          await _userSearchHistoryTermsCollection(user.uid, profileId, listId)
+              .orderBy('searchedAt', descending: true)
+              .limit(5)
+              .get();
 
       return querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
