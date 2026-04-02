@@ -206,18 +206,6 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  Future<void> _addVideoToList(VideoModel video) async {
-    try {
-      final firebaseVideoListProvider =
-          context.read<FirebaseVideoListProvider>();
-      await firebaseVideoListProvider.addVideoToList(widget.listId, video);
-      // Atualizar o estado para refletir a mudança
-      setState(() {});
-    } catch (e) {
-      // Removido SnackBar de erro
-    }
-  }
-
   void _previewVideo(VideoModel video) {
     _previewController?.pause();
     _previewController?.dispose();
