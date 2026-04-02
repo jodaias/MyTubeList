@@ -3,6 +3,7 @@ import '../models/video_list_model.dart';
 import '../models/video_model.dart';
 import '../services/firebase_service.dart';
 import '../di/service_locator.dart';
+import '../utils/retry.dart';
 
 class FirebaseVideoListProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = getIt<FirebaseService>();
@@ -19,13 +20,14 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _videoLists = await _firebaseService.getVideoLists();
+      _videoLists = await retryWithBackoff(
+        () => _firebaseService.getVideoLists(),
+      );
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
       notifyListeners();
-      // Silently handle load errors
     }
   }
 
@@ -40,7 +42,9 @@ class FirebaseVideoListProvider extends ChangeNotifier {
         profileId: profileId,
       );
 
-      await _firebaseService.createVideoList(videoList);
+      await retryWithBackoff(
+        () => _firebaseService.createVideoList(videoList),
+      );
       _videoLists.add(videoList);
 
       return true;
@@ -58,7 +62,9 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      await _firebaseService.updateVideoList(videoList);
+      await retryWithBackoff(
+        () => _firebaseService.updateVideoList(videoList),
+      );
 
       final index = _videoLists.indexWhere((list) => list.id == videoList.id);
       if (index != -1) {
@@ -81,7 +87,9 @@ class FirebaseVideoListProvider extends ChangeNotifier {
     try {
       notifyListeners();
 
-      await _firebaseService.deleteVideoList(listId);
+      await retryWithBackoff(
+        () => _firebaseService.deleteVideoList(listId),
+      );
       _videoLists.removeWhere((list) => list.id == listId);
 
       return true;
@@ -171,7 +179,9 @@ class FirebaseVideoListProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      await _firebaseService.syncVideoListsWithFirebase(videoLists);
+      await retryWithBackoff(
+        () => _firebaseService.syncVideoListsWithFirebase(videoLists),
+      );
       _videoLists = videoLists;
 
       _isLoading = false;

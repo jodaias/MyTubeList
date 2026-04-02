@@ -5,6 +5,7 @@ import '../constants/app_constants.dart';
 import '../models/video_model.dart';
 import '../services/firebase_service.dart';
 import '../di/service_locator.dart';
+import '../utils/retry.dart';
 
 class FirebaseVideoProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = getIt<FirebaseService>();
@@ -76,8 +77,9 @@ class FirebaseVideoProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      _previousSearches =
-          await _firebaseService.getSearchHistory(profileId, listId);
+      _previousSearches = await retryWithBackoff(
+        () => _firebaseService.getSearchHistory(profileId, listId),
+      );
     } catch (e) {
       // Silently handle load history errors
       _previousSearches = [];

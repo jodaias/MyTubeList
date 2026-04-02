@@ -1,516 +1,84 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
-import '../constants/app_constants.dart';
 import '../models/profile_model.dart';
 import '../models/video_list_model.dart';
-import '../models/video_model.dart';
+import '../repositories/auth_repository.dart';
+import '../repositories/video_list_repository.dart';
+import '../repositories/search_repository.dart';
 
+/// Facade that delegates to specific repositories.
+/// Kept for backward compatibility — providers can migrate
+/// to use repositories directly over time.
 class FirebaseService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+  final AuthRepository _authRepo = AuthRepository();
+  final VideoListRepository _videoListRepo = VideoListRepository();
+  final SearchRepository _searchRepo = SearchRepository();
 
-  // Collection references
-  CollectionReference get _usersCollection => _firestore.collection('users');
-  CollectionReference _userVideoListsCollection(String userId) =>
-      _usersCollection.doc(userId).collection('videoLists');
-  CollectionReference _userSearchHistoryCollection(String userId) =>
-      _usersCollection.doc(userId).collection('searchHistory');
-  CollectionReference _userSearchHistoryTermsCollection(
-          String userId, String profileId, String listId) =>
-      _userSearchHistoryCollection(userId)
-          .doc('${profileId}_$listId')
-          .collection('terms');
+  AuthRepository get authRepo => _authRepo;
+  VideoListRepository get videoListRepo => _videoListRepo;
+  SearchRepository get searchRepo => _searchRepo;
 
-  // 🔐 Autenticação usando apenas Firebase Auth (SEM armazenar senhas no Firestore)
-  Future<bool> signInWithUsername(String username, String password) async {
-    try {
-      // Buscar perfil no Firestore para obter o email real
-      final profile = await getProfileByUsername(username);
-      if (profile == null) {
-        return false;
-      }
+  // Auth
+  auth.User? get currentUser => _authRepo.currentUser;
 
-      // Usar o email real salvo no Firestore, ou fallback para o formato antigo
-      final email = profile.email ?? '$username@mytubelist.com';
-
-      // Tentar fazer login no Firebase Auth usando email real
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      return userCredential.user != null;
-    } catch (e) {
-      return false;
-    }
-  }
+  Future<bool> signInWithUsername(String username, String password) =>
+      _authRepo.signInWithUsername(username, password);
 
   Future<bool> createUserWithPassword(
-      String username, String password, String name,
-      {UserCategory? category}) async {
-    try {
-      // Validar username (sem espaços, acentos, etc.)
-      if (!_isValidUsername(username)) {
-        throw Exception(
-            'Nome de usuário inválido. Use apenas letras, números e underscore.');
-      }
-
-      // Verificar se usuário já existe no Firebase Auth
-      try {
-        await _auth.signInWithEmailAndPassword(
-          email: '$username@mytubelist.com',
-          password: password,
-        );
-        // Se conseguiu fazer login, o usuário já existe
-        await _auth.signOut();
-        throw Exception('Nome de usuário já existe.');
-      } catch (e) {
-        // Se não conseguiu fazer login, pode ser que o usuário não exista
-        // ou a senha esteja errada (o que é esperado para novo usuário)
-      }
-
-      // Criar usuário no Firebase Auth
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: '$username@mytubelist.com', // Email temporário
-        password: password,
-      );
-
-      if (userCredential.user == null) {
-        return false;
-      }
-
-      // Criar perfil NO Firestore SEM a senha
-      final profile = ProfileModel(
-        id: username, // Usar username como ID para consistência
-        name: name,
-        username: username,
-        category: category,
-        email: '$username@mytubelist.com', // Email padrão inicial
-      );
-
-      await _usersCollection.doc(userCredential.user!.uid).set({
-        'profile': {
-          'id': profile.id,
-          'name': profile.name,
-          'username': username,
-          'category': category?.firebaseValue,
-          'email': profile.email, // Salvar email no Firestore
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }
-      });
-
-      return true;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  bool _isValidUsername(String username) {
-    // Apenas letras, números e underscore, sem espaços
-    final regex = RegExp(r'^[a-zA-Z0-9_]+$');
-    return regex.hasMatch(username) &&
-        username.length >= 3 &&
-        username.length <= 20;
-  }
-
-  /// Converte string do Firebase para enum UserCategory
-  UserCategory? _parseCategory(String? categoryString) {
-    return ProfileModel.parseCategory(categoryString);
-  }
-
-  Future<ProfileModel?> getProfileByUsername(String username) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('profile.username',
-              isEqualTo: username) // Revertido: buscar dentro do profile
-          .limit(1)
-          .get();
-
-      if (querySnapshot.docs.isEmpty) {
-        return null;
-      }
-
-      final doc = querySnapshot.docs.first;
-      final data = doc.data();
-
-      final profileData = data['profile'] as Map<String, dynamic>;
-
-      return ProfileModel(
-        id: profileData['id'],
-        name: profileData['name'],
-        username: profileData['username'],
-        category: _parseCategory(profileData['category']),
-        email: profileData['email'],
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// 🚪 Fazer logout
-  Future<void> signOut() async {
-    try {
-      await _auth.signOut();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// 🗑️ Deletar usuário atual
-  Future<void> deleteCurrentUser() async {
-    try {
-      final user = currentUser;
-      if (user != null) {
-        // Deletar dados do Firestore
-        await _usersCollection.doc(user.uid).delete();
-
-        // Deletar usuário do Firebase Auth
-        await user.delete();
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  auth.User? get currentUser => _auth.currentUser;
-
-  // 👤 Perfil do usuário
-  Future<void> createProfile(ProfileModel profile) async {
-    try {
-      final user = currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
-
-      await _usersCollection.doc(user.uid).set({
-        'profile': {
-          'id': profile.id,
-          'name': profile.name,
-          'username': profile.username,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<ProfileModel?> getProfile() async {
-    try {
-      final user = currentUser;
-      if (user == null) return null;
-
-      final doc = await _usersCollection.doc(user.uid).get();
-      if (!doc.exists) return null;
-
-      final data = doc.data() as Map<String, dynamic>;
-      final profileData = data['profile'] as Map<String, dynamic>;
-
-      return ProfileModel(
-        id: profileData['id'],
-        name: profileData['name'],
-        username: profileData['username'],
-        category: _parseCategory(profileData['category']),
-        email: profileData['email'],
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // 📋 Listas de vídeos
-  Future<void> createVideoList(VideoListModel videoList) async {
-    try {
-      final user = currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
-
-      await _userVideoListsCollection(user.uid).doc(videoList.id).set({
-        'id': videoList.id,
-        'name': videoList.name,
-        'profileId': videoList.profileId,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'videos': videoList.videos
-            .map((video) => {
-                  'id': video.id,
-                  'title': video.title,
-                  'thumbnailUrl': video.thumbnailUrl,
-                  'addedAt': DateTime.now()
-                      .toIso8601String(), // Corrigido: usar DateTime.now()
-                })
-            .toList(),
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<VideoListModel>> getVideoLists() async {
-    try {
-      final user = currentUser;
-      if (user == null) return [];
-
-      final querySnapshot = await _userVideoListsCollection(user.uid).get();
-
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return VideoListModel(
-          id: data['id'],
-          name: data['name'],
-          profileId: data['profileId'],
-          videos: (data['videos'] as List<dynamic>? ?? []).map((videoData) {
-            return VideoModel(
-              id: videoData['id'],
-              title: videoData['title'],
-              thumbnailUrl: videoData['thumbnailUrl'],
-            );
-          }).toList(),
-        );
-      }).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<void> updateVideoList(VideoListModel videoList) async {
-    try {
-      final user = currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
-
-      await _userVideoListsCollection(user.uid).doc(videoList.id).update({
-        'name': videoList.name,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'videos': videoList.videos
-            .map((video) => {
-                  'id': video.id,
-                  'title': video.title,
-                  'thumbnailUrl': video.thumbnailUrl,
-                  'addedAt': DateTime.now()
-                      .toIso8601String(), // Corrigido: usar DateTime.now()
-                })
-            .toList(),
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<void> deleteVideoList(String listId) async {
-    try {
-      final user = currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
-
-      await _userVideoListsCollection(user.uid).doc(listId).delete();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // 🔍 Histórico de buscas
-  Future<void> addSearchTerm(
-      String term, String profileId, String listId) async {
-    try {
-      final user = currentUser;
-      if (user == null) throw Exception('Usuário não autenticado');
-
-      final normalizedTerm = term.trim();
-      if (normalizedTerm.isEmpty) return;
-
-      final termDocId = Uri.encodeComponent(normalizedTerm.toLowerCase());
-      final termsCollection =
-          _userSearchHistoryTermsCollection(user.uid, profileId, listId);
-
-      // Upsert por termo (por perfil/lista), atualizando timestamp quando repetir.
-      await termsCollection.doc(termDocId).set({
-        'term': normalizedTerm,
-        'searchedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-      // Manter apenas os 5 termos mais recentes por perfil/lista
-      final recentSearches =
-          await termsCollection.orderBy('searchedAt', descending: true).get();
-
-      if (recentSearches.docs.length > 5) {
-        final docsToDelete = recentSearches.docs.skip(5);
-        final batch = _firestore.batch();
-
-        for (final doc in docsToDelete) {
-          batch.delete(doc.reference);
-        }
-
-        await batch.commit();
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<String>> getSearchHistory(String profileId, String listId) async {
-    try {
-      final user = currentUser;
-      if (user == null) return [];
-
-      final querySnapshot =
-          await _userSearchHistoryTermsCollection(user.uid, profileId, listId)
-              .orderBy('searchedAt', descending: true)
-              .limit(AppConstants.maxSearchHistory)
-              .get();
-
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['term'] as String;
-      }).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // 🔄 Sincronização
-  Future<void> syncProfileWithFirebase(ProfileModel profile) async {
-    try {
-      // Verificar se o perfil já existe pelo username
-      var existingProfile = await getProfileByUsername(profile.username);
-
-      // Se não encontrou pelo username, verificar pelo perfil atual
-      if (existingProfile == null) {
-        existingProfile = await getProfile();
-      }
-
-      if (existingProfile == null) {
-        await createProfile(profile);
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<void> syncVideoListsWithFirebase(
-      List<VideoListModel> videoLists) async {
-    try {
-      final user = currentUser;
-      if (user == null) {
-        try {
-          final credential = await _auth.signInAnonymously();
-          if (credential.user == null) {
-            return;
-          }
-        } catch (e) {
-          return;
-        }
-      }
-
-      for (final videoList in videoLists) {
-        final existingLists = await getVideoLists();
-        final existingList = existingLists.firstWhere(
-          (list) => list.id == videoList.id,
-          orElse: () => videoList,
-        );
-
-        if (existingList.id == videoList.id) {
-          await updateVideoList(videoList);
-        } else {
-          await createVideoList(videoList);
-        }
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  /// 📧 Atualizar email do usuário
-  Future<bool> updateEmail(String newEmail) async {
-    try {
-      final user = currentUser;
-      if (user == null) return false;
-
-      // Verificar se o email é válido
-      if (!_isValidEmail(newEmail)) {
-        return false;
-      }
-
-      // Atualizar email no Firebase Auth
-      await user.verifyBeforeUpdateEmail(newEmail);
-
-      // Atualizar perfil no Firestore com o novo email
-      await _usersCollection.doc(user.uid).update({
-        'profile.email': newEmail,
-        'profile.updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// 🔐 Alterar senha do usuário
-  Future<bool> changePassword(
-      String currentPassword, String newPassword) async {
-    try {
-      final user = currentUser;
-      if (user == null) return false;
-
-      // Reautenticar o usuário antes de alterar a senha
-      final credential = auth.EmailAuthProvider.credential(
-        email: user.email ?? '',
-        password: currentPassword,
-      );
-
-      await user.reauthenticateWithCredential(credential);
-
-      // Alterar a senha
-      await user.updatePassword(newPassword);
-
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// 📧 Enviar email de recuperação de senha
-  Future<bool> sendPasswordResetEmail(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Validar formato de email
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
-  /// 📧 Verificar se o email está verificado
-  bool isEmailVerified() {
-    final user = currentUser;
-    return user?.emailVerified ?? false;
-  }
-
-  /// 📧 Enviar email de verificação
-  Future<bool> sendEmailVerification() async {
-    try {
-      final user = currentUser;
-      if (user == null) return false;
-
-      await user.sendEmailVerification();
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// 🔄 Recarregar dados do usuário (para atualizar status de verificação)
-  Future<void> reloadUser() async {
-    try {
-      final user = currentUser;
-      if (user != null) {
-        await user.reload();
-      }
-    } catch (e) {
-      // Silently handle reload errors
-    }
-  }
+          String username, String password, String name,
+          {UserCategory? category}) =>
+      _authRepo.createUserWithPassword(username, password, name,
+          category: category);
+
+  Future<void> signOut() => _authRepo.signOut();
+
+  Future<void> deleteCurrentUser() => _authRepo.deleteCurrentUser();
+
+  Future<bool> updateEmail(String newEmail) => _authRepo.updateEmail(newEmail);
+
+  Future<bool> changePassword(String currentPassword, String newPassword) =>
+      _authRepo.changePassword(currentPassword, newPassword);
+
+  Future<bool> sendPasswordResetEmail(String email) =>
+      _authRepo.sendPasswordResetEmail(email);
+
+  bool isEmailVerified() => _authRepo.isEmailVerified();
+
+  Future<bool> sendEmailVerification() => _authRepo.sendEmailVerification();
+
+  Future<void> reloadUser() => _authRepo.reloadUser();
+
+  // Profile
+  Future<void> createProfile(ProfileModel profile) =>
+      _authRepo.createProfile(profile);
+
+  Future<ProfileModel?> getProfile() => _authRepo.getProfile();
+
+  Future<ProfileModel?> getProfileByUsername(String username) =>
+      _authRepo.getProfileByUsername(username);
+
+  Future<void> syncProfileWithFirebase(ProfileModel profile) =>
+      _authRepo.syncProfileWithFirebase(profile);
+
+  // Video Lists
+  Future<void> createVideoList(VideoListModel videoList) =>
+      _videoListRepo.createVideoList(videoList);
+
+  Future<List<VideoListModel>> getVideoLists() =>
+      _videoListRepo.getVideoLists();
+
+  Future<void> updateVideoList(VideoListModel videoList) =>
+      _videoListRepo.updateVideoList(videoList);
+
+  Future<void> deleteVideoList(String listId) =>
+      _videoListRepo.deleteVideoList(listId);
+
+  Future<void> syncVideoListsWithFirebase(List<VideoListModel> videoLists) =>
+      _videoListRepo.syncVideoListsWithFirebase(videoLists);
+
+  // Search History
+  Future<void> addSearchTerm(String term, String profileId, String listId) =>
+      _searchRepo.addSearchTerm(term, profileId, listId);
+
+  Future<List<String>> getSearchHistory(String profileId, String listId) =>
+      _searchRepo.getSearchHistory(profileId, listId);
 }

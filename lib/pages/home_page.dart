@@ -8,6 +8,7 @@ import '../providers/firebase_video_list_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../models/video_list_model.dart';
 import '../models/profile_model.dart';
+import '../widgets/empty_state_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -196,33 +197,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               )
             : lists.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.playlist_add,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Nenhuma lista criada ainda',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Crie sua primeira lista de vídeos!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
+                ? const EmptyStateWidget(
+                    icon: Icons.playlist_add,
+                    title: 'Nenhuma lista criada ainda',
+                    subtitle: 'Crie sua primeira lista de vídeos!',
                   )
                 : GridView.builder(
                     padding: const EdgeInsets.all(16),

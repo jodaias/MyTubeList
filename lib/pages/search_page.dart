@@ -8,6 +8,7 @@ import '../providers/firebase_video_list_provider.dart';
 import '../providers/firebase_video_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
+import '../widgets/empty_state_widget.dart';
 
 class SearchPage extends StatefulWidget {
   final String listId;
@@ -440,8 +441,9 @@ class _SearchPageState extends State<SearchPage> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchResults.isEmpty && _hasSearched
-                    ? const Center(
-                        child: Text('Nenhum resultado encontrado'),
+                    ? const EmptyStateWidget(
+                        icon: Icons.search_off,
+                        title: 'Nenhum resultado encontrado',
                       )
                     : GridView.builder(
                         padding: const EdgeInsets.all(8),

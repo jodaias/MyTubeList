@@ -5,6 +5,7 @@ import '../providers/firebase_video_list_provider.dart';
 import '../providers/firebase_profile_provider.dart';
 import '../utils/confirmation_modal.dart';
 import '../widgets/video_card.dart';
+import '../widgets/empty_state_widget.dart';
 
 class VideosPage extends StatefulWidget {
   final String listId;
@@ -155,42 +156,10 @@ class _VideosPageState extends State<VideosPage> {
         ],
       ),
       body: videoList.videos.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.video_library,
-                    size: 64,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withAlpha((0.4 * 255).toInt()),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Nenhum vídeo adicionado',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withAlpha((0.6 * 255).toInt()),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Adicione vídeos à sua lista!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withAlpha((0.5 * 255).toInt()),
-                    ),
-                  ),
-                ],
-              ),
+          ? const EmptyStateWidget(
+              icon: Icons.video_library,
+              title: 'Nenhum vídeo adicionado',
+              subtitle: 'Adicione vídeos à sua lista!',
             )
           : GridView.builder(
               padding: const EdgeInsets.all(8),

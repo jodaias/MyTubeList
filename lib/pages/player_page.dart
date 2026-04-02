@@ -60,6 +60,9 @@ class _PlayerPageState extends State<PlayerPage> {
   int _gestureFeedbackVersion = 0;
   int _unlockUiVersion = 0;
 
+  // Listener reference for proper cleanup
+  late final VoidCallback _controllerListener;
+
   @override
   void initState() {
     super.initState();
@@ -69,12 +72,13 @@ class _PlayerPageState extends State<PlayerPage> {
 
     _itemKeys = List.generate(widget.videos.length, (_) => GlobalKey());
 
-    _controller.addListener(() {
+    _controllerListener = () {
       if (mounted && _currentStatusPlaying != _controller.value.isPlaying) {
         _currentStatusPlaying = _controller.value.isPlaying;
         setState(() {});
       }
-    });
+    };
+    _controller.addListener(_controllerListener);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       scrollToIndex(_currentIndex);
@@ -452,9 +456,15 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   void dispose() {
+    _controller.removeListener(_controllerListener);
     _setPortraitOnlyOrientation();
     _controller.dispose();
     _scrollController.dispose();
+    // Invalidate pending Future.delayed callbacks
+    _gestureFeedbackVersion++;
+    _unlockUiVersion++;
+    // Reset brightness to system default
+    ScreenBrightness().resetApplicationScreenBrightness();
     super.dispose();
   }
 

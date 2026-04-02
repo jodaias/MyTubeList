@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/profile_model.dart';
 import '../services/firebase_service.dart';
 import '../di/service_locator.dart';
+import '../utils/retry.dart';
 
 class FirebaseProfileProvider extends ChangeNotifier {
   final FirebaseService _firebaseService = getIt<FirebaseService>();
@@ -27,8 +28,9 @@ class FirebaseProfileProvider extends ChangeNotifier {
       _isAuthenticated = _firebaseService.currentUser != null;
 
       if (_isAuthenticated) {
-        // Carregar perfil do Firebase
-        _currentProfile = await _firebaseService.getProfile();
+        _currentProfile = await retryWithBackoff(
+          () => _firebaseService.getProfile(),
+        );
       }
     } catch (e) {
       // Silently handle initialization errors
@@ -44,12 +46,12 @@ class FirebaseProfileProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // Verificar se está autenticado
       _isAuthenticated = _firebaseService.currentUser != null;
 
       if (_isAuthenticated) {
-        // Carregar perfil atual
-        _currentProfile = await _firebaseService.getProfile();
+        _currentProfile = await retryWithBackoff(
+          () => _firebaseService.getProfile(),
+        );
       }
     } catch (e) {
       _isAuthenticated = false;
