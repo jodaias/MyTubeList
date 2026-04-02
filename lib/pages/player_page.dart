@@ -180,8 +180,12 @@ class _PlayerPageState extends State<PlayerPage> {
     });
   }
 
-  Widget _buildPlayerGestureLayer() {
-    return Positioned.fill(
+  Widget _buildPlayerGestureLayer({double rightInset = 0}) {
+    return Positioned(
+      left: 0,
+      top: 0,
+      bottom: 0,
+      right: rightInset,
       child: Row(
         children: [
           Expanded(
@@ -693,7 +697,11 @@ class _PlayerPageState extends State<PlayerPage> {
               child: const SizedBox.expand(),
             ),
           ),
-          if (!_isScreenLocked) _buildPlayerGestureLayer(),
+          if (!_isScreenLocked)
+            _buildPlayerGestureLayer(
+              rightInset:
+                  _showList ? MediaQuery.of(context).size.width * 0.25 : 0,
+            ),
           if (!_isScreenLocked && _showBackward)
             Positioned.fill(
               left: 120,
